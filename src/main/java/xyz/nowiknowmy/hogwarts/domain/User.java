@@ -6,7 +6,6 @@ import javax.persistence.*;
 
 @Entity
 @Table(name = "users")
-@EntityListeners(AuditingEntityListener.class)
 public class User extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

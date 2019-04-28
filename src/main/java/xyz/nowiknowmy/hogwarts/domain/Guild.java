@@ -1,12 +1,9 @@
 package xyz.nowiknowmy.hogwarts.domain;
 
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import javax.persistence.*;
 
 @Entity
 @Table(name = "guilds")
-@EntityListeners(AuditingEntityListener.class)
 public class Guild extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

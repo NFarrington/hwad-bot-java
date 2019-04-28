@@ -2,9 +2,8 @@ package xyz.nowiknowmy.hogwarts.repositories;
 
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
-import xyz.nowiknowmy.hogwarts.domain.Guild;
+import xyz.nowiknowmy.hogwarts.domain.Revision;
 
 @Repository
-public interface GuildRepository extends CrudRepository<Guild, Integer> {
-    Guild findByGuildId(String guildId);
+public interface RevisionRepository extends CrudRepository<Revision, Integer> {
 }
