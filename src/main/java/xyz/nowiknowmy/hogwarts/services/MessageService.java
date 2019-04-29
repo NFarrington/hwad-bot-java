@@ -44,9 +44,9 @@ public class MessageService {
         String content = message.getContent().get();
 
         if (Str.regex("^!(time|servertime) ?.*$").matches(content)) {
-            sendServerTime(message.getChannel().block());
+            return sendServerTime(message);
         } else if (Str.regex("^!points ?.*$").matches(content)) {
-            sendPointsSummary(message.getChannel().block(), guild);
+            return sendPointsSummary(message, guild);
         } else if (Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").matches(content)) {
             List<String> regexMatches = Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").groups(content);
             List<Role> existingHouse = message.getAuthorAsMember().block().getRoles().collectList().block()
@@ -153,30 +153,32 @@ public class MessageService {
         channel.createMessage(errorMessage).subscribe();
     }
 
-    private Void sendServerTime(MessageChannel channel) {
-        ZoneId zone = ZoneId.of("America/New_York");
-        ZonedDateTime zdt = ZonedDateTime.now(zone);
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("h:mma z")
-                .withLocale(new Locale("en", "US"));
-        String time = dtf.format(zdt);
+    private Mono<Void> sendServerTime(Message message) {
+        return message.getChannel()
+            .flatMap(channel -> {
+                ZoneId zone = ZoneId.of("America/New_York");
+                ZonedDateTime zdt = ZonedDateTime.now(zone);
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("h:mma z")
+                    .withLocale(new Locale("en", "US"));
+                String time = dtf.format(zdt);
 
-        String timeMessage = String.format("It is currently %s.", time);
-        channel.createMessage(timeMessage).block();
-
-        return null;
+                String timeMessage = String.format("It is currently %s.", time);
+                return channel.createMessage(timeMessage);
+            }).flatMap(ignored -> Mono.empty());
     }
 
-    private Void sendPointsSummary(MessageChannel channel, Guild guild) {
-        Map<String, Long> points = pointsRepository.findByGuildId(guild.getId())
-                .stream().collect(Collectors.toMap(Points::getHouse, Points::getPoints));
-        String pointsMessage = String.format("Gryffindor: %s\nHufflepuff: %s\nRavenclaw: %s\nSlytherin: %s\n",
-                points.getOrDefault("g", 0L),
-                points.getOrDefault("h", 0L),
-                points.getOrDefault("r", 0L),
-                points.getOrDefault("s", 0L));
+    private Mono<Void> sendPointsSummary(Message message, Guild guild) {
+        return message.getChannel()
+            .flatMap(channel -> {
+                Map<String, Long> points = pointsRepository.findByGuildId(guild.getId())
+                    .stream().collect(Collectors.toMap(Points::getHouse, Points::getPoints));
+                String pointsMessage = String.format("Gryffindor: %s\nHufflepuff: %s\nRavenclaw: %s\nSlytherin: %s\n",
+                    points.getOrDefault("g", 0L),
+                    points.getOrDefault("h", 0L),
+                    points.getOrDefault("r", 0L),
+                    points.getOrDefault("s", 0L));
 
-        channel.createMessage(pointsMessage).block();
-
-        return null;
+                return channel.createMessage(pointsMessage);
+            }).flatMap(ignored -> Mono.empty());
     }
 }
