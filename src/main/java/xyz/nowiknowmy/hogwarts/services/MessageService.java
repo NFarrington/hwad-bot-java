@@ -1,6 +1,9 @@
 package xyz.nowiknowmy.hogwarts.services;
 
+import discord4j.core.object.Embed;
 import discord4j.core.object.entity.Message;
+import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.core.spec.MessageCreateSpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -10,14 +13,19 @@ import reactor.function.TupleUtils;
 import reactor.util.function.Tuples;
 import xyz.nowiknowmy.hogwarts.authorization.MemberAuthorization;
 import xyz.nowiknowmy.hogwarts.domain.Guild;
+import xyz.nowiknowmy.hogwarts.domain.Member;
 import xyz.nowiknowmy.hogwarts.domain.Points;
 import xyz.nowiknowmy.hogwarts.helpers.Str;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
+import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.repositories.PointsRepository;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,10 +40,14 @@ public class MessageService {
 
     private final GuildRepository guildRepository;
     private final PointsRepository pointsRepository;
+    private final MemberRepository memberRepository;
 
-    public MessageService(GuildRepository guildRepository, PointsRepository pointsRepository) {
+    private static final ZoneId zone = ZoneId.of("America/New_York");
+
+    public MessageService(GuildRepository guildRepository, PointsRepository pointsRepository, MemberRepository memberRepository) {
         this.guildRepository = guildRepository;
         this.pointsRepository = pointsRepository;
+        this.memberRepository = memberRepository;
     }
 
     public Mono<Void> handle(Message message) {
@@ -82,7 +94,7 @@ public class MessageService {
             List<String> regexMatches = Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").groups(content);
 
             return message.getAuthorAsMember()
-                .flatMap(member -> (new MemberAuthorization(member)).canModifyPoints()
+                .flatMap(member -> new MemberAuthorization(member).canModifyPoints()
                     .flatMap(authorized -> {
                         if (authorized) {
                             return myGuild.map(guild -> updatePoints(guild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3)))
@@ -93,7 +105,21 @@ public class MessageService {
                         }
                     })).then();
         } else if (Str.regex("^!inactive (\\d+[d|m|y])$").matches(content)) {
-            throw new UnsupportedOperationException("Not implemented");
+            List<String> regexMatches = Str.regex("^!inactive (\\d+[d|m|y])$").groups(content);
+
+            return message.getAuthorAsMember()
+                .filterWhen(member -> new MemberAuthorization(member).canListInactive())
+                .map(Optional::of)
+                .defaultIfEmpty(Optional.empty())
+                .flatMap(member -> {
+                    if (member.isPresent()) {
+                        Duration interval = Duration.parse("P" + regexMatches.get(1).toUpperCase());
+                        return myGuild
+                            .flatMap(guild -> sendInactiveList(message, guild, interval));
+                    } else {
+                        return sendError(message, "Sorry, you are not permitted to list inactive members!");
+                    }
+                }).then();
         } else if (Str.regex("^!bumpyears$").matches(content)) {
             throw new UnsupportedOperationException("Not implemented");
         } else if (Str.regex("^!removetags$").matches(content)) {
@@ -101,6 +127,38 @@ public class MessageService {
         }
 
         return Mono.empty();
+    }
+
+    private Mono<Message> sendInactiveList(Message message, Guild guild, Duration interval) {
+        LocalDateTime inactiveSince = LocalDateTime.now().minus(interval);
+        List<Member> inactiveMembers = memberRepository.findInactiveMembers(guild.getId(), inactiveSince);
+        String inactiveMembersString = inactiveMembers.stream().map(member -> {
+            String name = member.getNickname() != null ? member.getNickname() : member.getUsername();
+            String lastMessage = member.getLastMessageAt() != null
+                ? ZonedDateTime.ofInstant(member.getLastMessageAt().toInstant(), zone).format(DateTimeFormatter.ofPattern("y-M-d H:mm z").withLocale(new Locale("en", "US")))
+                : "[unknown]";
+            return String.format("%s since %s", name, lastMessage);
+        }).collect(Collectors.joining("\n"));
+
+        if (inactiveMembersString == null || inactiveMembersString.isEmpty()) {
+            return message.getChannel()
+                .flatMap(channel -> channel.createMessage("No inactive members were found."));
+        }
+
+        if (inactiveMembersString.getBytes().length > 2042) {
+            inactiveMembersString = inactiveMembersString.substring(0, 2039) + "...";
+        }
+
+        final String description = String.format("```%s```", inactiveMembersString);
+
+        return message.getChannel()
+            .flatMap(channel -> channel.createMessage(
+                messageSpec -> messageSpec
+                    .setContent("The following members are inactive:")
+                    .setEmbed(embedSpec -> embedSpec
+                        .setTitle("Inactive Members")
+                        .setDescription(description))
+            ));
     }
 
     private Mono<Message> sendPointsUpdate(Message message, Points points) {
@@ -165,7 +223,6 @@ public class MessageService {
     private Mono<Void> sendServerTime(Message message) {
         return message.getChannel()
             .flatMap(channel -> {
-                ZoneId zone = ZoneId.of("America/New_York");
                 ZonedDateTime zdt = ZonedDateTime.now(zone);
                 DateTimeFormatter dtf = DateTimeFormatter.ofPattern("h:mma z")
                     .withLocale(new Locale("en", "US"));

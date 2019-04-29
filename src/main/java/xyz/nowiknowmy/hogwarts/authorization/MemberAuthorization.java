@@ -2,6 +2,7 @@ package xyz.nowiknowmy.hogwarts.authorization;
 
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.util.Permission;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -22,43 +23,17 @@ public class MemberAuthorization {
     }
 
     public Mono<Boolean> canModifyPoints() {
-        logger.info("Checking if permitted");
         return member.getRoles()
                 .filter(role -> role.getPermissions().contains(Permission.ADMINISTRATOR)
                         || Arrays.asList("Professors", "Prefects").contains(role.getName()))
                 .count()
-                .map(count -> {
-                    logger.info(count > 0 ? "Permitted" : "Not permitted");
-//                    if (count == 0) {
-//                        throw new AuthorizationException("User is not permitted to modify points.");
-//                    }
-                    return count > 0;
-                });
-//        return member.flatMap(member1 -> member1.getRoles().collectList())
-//                .map(role ->
-//                        role.stream().map(role1 -> role1.getPermissions().contains(Permission.ADMINISTRATOR)
-//                                || Arrays.asList("Professors", "Prefects").contains(role1.getName()))
-//                                .count()
-//                )
-//                .map(count -> count > 0);
+                .map(count -> count > 0);
     }
-//    public static class AuthorizationBuilder {
-//        private Member member;
-//
-//        public AuthorizationBuilder(Member member) {
-//            this.member = member;
-//        }
-//
-//        public MemberAuthorization build() {
-//            MemberAuthorization memberAuthorization = new MemberAuthorization();
-//            memberAuthorization.member = member;
-//
-//            return memberAuthorization;
-//        }
-//    }
-//
-//    private Member member;
-//
-//    private MemberAuthorization() {
-//    }
+
+    public Mono<Boolean> canListInactive() {
+        return member.getRoles()
+            .filter(role -> role.getPermissions().contains(Permission.ADMINISTRATOR))
+            .count()
+            .map(count -> count > 0);
+    }
 }
