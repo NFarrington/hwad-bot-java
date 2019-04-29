@@ -1,11 +1,13 @@
 package xyz.nowiknowmy.hogwarts.services;
 
+import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.function.TupleUtils;
 import reactor.util.function.Tuples;
@@ -18,6 +20,7 @@ import xyz.nowiknowmy.hogwarts.helpers.Str;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.PointsRepository;
 
+import javax.swing.text.html.Option;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -53,43 +56,50 @@ public class MessageService {
             return myGuild.flatMap(guild -> sendPointsSummary(message, guild));
         } else if (Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").matches(content)) {
             List<String> regexMatches = Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").groups(content);
-            List<Role> existingHouse = message.getAuthorAsMember().block().getRoles().collectList().block()
-                    .stream().filter(role -> Str.regex("^(Gryffindor|Hufflepuff|Ravenclaw|Slytherin)$", Pattern.CASE_INSENSITIVE).matches(role.getName()))
-                    .collect(Collectors.toList());
 
-            if (existingHouse.size() > 0) {
-                sendError(message.getChannel().block(), "Sorry, you already have a house!");
-                return Mono.empty();
-            }
-
-            Optional<Role> role = message.getGuild().block().getRoles().collectList().block()
-                    .stream().filter(role1 -> role1.getName().compareToIgnoreCase(regexMatches.get(1)) == 0)
-                    .findFirst();
-
-            if (role.isEmpty()) {
-                sendError(message.getChannel().block(), "Sorry, we could not find that role!");
-                return Mono.empty();
-            }
-
-            message.getAuthorAsMember().block().addRole(role.get().getId()).block();
-            message.getChannel().block().createMessage(String.format("You are now a member of %s!", regexMatches.get(1))).block();
+            return message.getAuthorAsMember()
+                .flatMap(member -> member.getRoles().collectList())
+                .flatMapMany(Flux::fromIterable)
+                .filter(role -> Str.regex("^(Gryffindor|Hufflepuff|Ravenclaw|Slytherin)$", Pattern.CASE_INSENSITIVE).matches(role.getName()))
+                .count()
+                .flatMap(existingHouses -> {
+                    if (existingHouses == 0) {
+                        return message.getGuild()
+                            .flatMap(guild -> guild.getRoles().collectList())
+                            .flatMapMany(Flux::fromIterable)
+                            .filter(role -> role.getName().compareToIgnoreCase(regexMatches.get(1)) == 0)
+                            .singleOrEmpty()
+                            .map(Optional::of)
+                            .defaultIfEmpty(Optional.empty())
+                            .flatMap(role -> role.isPresent()
+                                ? message.getAuthorAsMember()
+                                .flatMap(member -> member.addRole(role.get().getId()))
+                                .then(message.getChannel())
+                                .flatMap(channel -> channel.createMessage(String.format("You are now a member of %s!", regexMatches.get(1))))
+                                .then()
+                                : sendError(message, "Sorry, we could not find that role!")
+                                .then());
+                    } else {
+                        return sendError(message, "Sorry, you already have a house!").then();
+                    }
+                });
         } else if (Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").matches(content)) {
             logger.info(content);
             List<String> regexMatches = Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").groups(content);
 
             return message.getAuthorAsMember()
-                    .filterWhen(member -> (new MemberAuthorization(member)).canModifyPoints())
-                    .doOnError(error -> {
-                        if (error instanceof AuthorizationException) {
-                            message.getChannel().subscribe(channel -> sendError(channel, "Sorry, you are not permitted to modify house points!"));
-                        } else {
-                            throw new RuntimeException(error);
-                        }
-                    }).flatMap(ignored -> myGuild)
-                    .map(guild -> updatePoints(guild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3)))
-                    .map(points -> Tuples.of(message, points))
-                    .flatMap(TupleUtils.function(this::sendPointsUpdate))
-                    .flatMap(ignored -> Mono.empty());
+                .filterWhen(member -> (new MemberAuthorization(member)).canModifyPoints())
+                .doOnError(error -> {
+                    if (error instanceof AuthorizationException) {
+                        sendError(message, "Sorry, you are not permitted to modify house points!").subscribe();
+                    } else {
+                        throw new RuntimeException(error);
+                    }
+                }).flatMap(ignored -> myGuild)
+                .map(guild -> updatePoints(guild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3)))
+                .map(points -> Tuples.of(message, points))
+                .flatMap(TupleUtils.function(this::sendPointsUpdate))
+                .then();
         } else if (Str.regex("^!inactive (\\d+[d|m|y])$").matches(content)) {
             throw new UnsupportedOperationException("Not implemented");
         } else if (Str.regex("^!bumpyears$").matches(content)) {
@@ -155,8 +165,9 @@ public class MessageService {
         return currentPoints;
     }
 
-    private void sendError(MessageChannel channel, String errorMessage) {
-        channel.createMessage(errorMessage).subscribe();
+    private Mono<Message> sendError(Message message, String errorMessage) {
+        return message.getChannel()
+            .flatMap(channel -> channel.createMessage(errorMessage));
     }
 
     private Mono<Void> sendServerTime(Message message) {
