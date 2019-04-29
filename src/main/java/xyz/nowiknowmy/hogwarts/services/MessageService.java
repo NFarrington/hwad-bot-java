@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.function.TupleUtils;
+import reactor.util.function.Tuples;
 import xyz.nowiknowmy.hogwarts.BotEventListener;
 import xyz.nowiknowmy.hogwarts.authorization.MemberAuthorization;
 import xyz.nowiknowmy.hogwarts.domain.Guild;
@@ -40,13 +42,15 @@ public class MessageService {
     }
 
     public Mono<Void> handle(Message message) {
-        Guild guild = guildRepository.findByGuildId(message.getGuild().block().getId().asString());
+        Mono<Guild> myGuild = message.getGuild()
+            .map(guild -> guild.getId().asString())
+            .map(guildRepository::findByGuildId);
         String content = message.getContent().get();
 
         if (Str.regex("^!(time|servertime) ?.*$").matches(content)) {
             return sendServerTime(message);
         } else if (Str.regex("^!points ?.*$").matches(content)) {
-            return sendPointsSummary(message, guild);
+            return myGuild.flatMap(guild -> sendPointsSummary(message, guild));
         } else if (Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").matches(content)) {
             List<String> regexMatches = Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").groups(content);
             List<Role> existingHouse = message.getAuthorAsMember().block().getRoles().collectList().block()
@@ -73,7 +77,7 @@ public class MessageService {
             logger.info(content);
             List<String> regexMatches = Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").groups(content);
 
-            message.getAuthorAsMember()
+            return message.getAuthorAsMember()
                     .filterWhen(member -> (new MemberAuthorization(member)).canModifyPoints())
                     .doOnError(error -> {
                         if (error instanceof AuthorizationException) {
@@ -81,10 +85,11 @@ public class MessageService {
                         } else {
                             throw new RuntimeException(error);
                         }
-                    })
-                    .map(member -> updatePoints(guild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3)))
-                    .map(points -> sendPointsUpdate(message.getChannel().block(), points))
-                    .subscribe();
+                    }).flatMap(ignored -> myGuild)
+                    .map(guild -> updatePoints(guild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3)))
+                    .map(points -> Tuples.of(message, points))
+                    .flatMap(TupleUtils.function(this::sendPointsUpdate))
+                    .flatMap(ignored -> Mono.empty());
         } else if (Str.regex("^!inactive (\\d+[d|m|y])$").matches(content)) {
             throw new UnsupportedOperationException("Not implemented");
         } else if (Str.regex("^!bumpyears$").matches(content)) {
@@ -96,29 +101,30 @@ public class MessageService {
         return Mono.empty();
     }
 
-    private MessageChannel sendPointsUpdate(MessageChannel channel, Points points) {
-        logger.info("Updating channel");
-        final String house;
-        switch (points.getHouse()) {
-            case "g":
-                house = "Gryffindor";
-                break;
-            case "h":
-                house = "Hufflepuff";
-                break;
-            case "r":
-                house = "Ravenclaw";
-                break;
-            case "s":
-                house = "Slytherin";
-                break;
-            default:
-                throw new IllegalArgumentException(String.format("'%s' is not a house.", points.getHouse()));
-        }
+    private Mono<Message> sendPointsUpdate(Message message, Points points) {
+        return message.getChannel()
+            .flatMap(channel -> {
+                logger.info("Updating channel");
+                final String house;
+                switch (points.getHouse()) {
+                    case "g":
+                        house = "Gryffindor";
+                        break;
+                    case "h":
+                        house = "Hufflepuff";
+                        break;
+                    case "r":
+                        house = "Ravenclaw";
+                        break;
+                    case "s":
+                        house = "Slytherin";
+                        break;
+                    default:
+                        throw new IllegalArgumentException(String.format("'%s' is not a house.", points.getHouse()));
+                }
 
-        channel.createMessage(house + " now has " + points.getPoints() + " points.").subscribe();
-
-        return channel;
+                return channel.createMessage(house + " now has " + points.getPoints() + " points.");
+            });
     }
 
     private Points updatePoints(Guild guild, String house, String operation, String points) {
