@@ -1,9 +1,6 @@
 package xyz.nowiknowmy.hogwarts.services;
 
-import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.MessageChannel;
-import discord4j.core.object.entity.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -11,16 +8,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.function.TupleUtils;
 import reactor.util.function.Tuples;
-import xyz.nowiknowmy.hogwarts.BotEventListener;
 import xyz.nowiknowmy.hogwarts.authorization.MemberAuthorization;
 import xyz.nowiknowmy.hogwarts.domain.Guild;
 import xyz.nowiknowmy.hogwarts.domain.Points;
-import xyz.nowiknowmy.hogwarts.exceptions.AuthorizationException;
 import xyz.nowiknowmy.hogwarts.helpers.Str;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.PointsRepository;
 
-import javax.swing.text.html.Option;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -88,18 +82,16 @@ public class MessageService {
             List<String> regexMatches = Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").groups(content);
 
             return message.getAuthorAsMember()
-                .filterWhen(member -> (new MemberAuthorization(member)).canModifyPoints())
-                .doOnError(error -> {
-                    if (error instanceof AuthorizationException) {
-                        sendError(message, "Sorry, you are not permitted to modify house points!").subscribe();
-                    } else {
-                        throw new RuntimeException(error);
-                    }
-                }).flatMap(ignored -> myGuild)
-                .map(guild -> updatePoints(guild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3)))
-                .map(points -> Tuples.of(message, points))
-                .flatMap(TupleUtils.function(this::sendPointsUpdate))
-                .then();
+                .flatMap(member -> (new MemberAuthorization(member)).canModifyPoints()
+                    .flatMap(authorized -> {
+                        if (authorized) {
+                            return myGuild.map(guild -> updatePoints(guild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3)))
+                                .map(points -> Tuples.of(message, points))
+                                .flatMap(TupleUtils.function(this::sendPointsUpdate));
+                        } else {
+                            return sendError(message, "Sorry, you are not permitted to modify house points!");
+                        }
+                    })).then();
         } else if (Str.regex("^!inactive (\\d+[d|m|y])$").matches(content)) {
             throw new UnsupportedOperationException("Not implemented");
         } else if (Str.regex("^!bumpyears$").matches(content)) {

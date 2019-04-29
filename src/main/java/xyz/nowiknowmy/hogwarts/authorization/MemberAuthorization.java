@@ -29,9 +29,9 @@ public class MemberAuthorization {
                 .count()
                 .map(count -> {
                     logger.info(count > 0 ? "Permitted" : "Not permitted");
-                    if (count == 0) {
-                        throw new AuthorizationException("User is not permitted to modify points.");
-                    }
+//                    if (count == 0) {
+//                        throw new AuthorizationException("User is not permitted to modify points.");
+//                    }
                     return count > 0;
                 });
 //        return member.flatMap(member1 -> member1.getRoles().collectList())
