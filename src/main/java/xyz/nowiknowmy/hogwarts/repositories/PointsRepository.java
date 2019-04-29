@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface PointsRepository extends CrudRepository<Points, Integer> {
     List<Points> findByGuildId(Integer guildId);
+    Points findByGuildIdAndHouse(Integer guildId, String house);
 }

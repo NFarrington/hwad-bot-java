@@ -12,6 +12,15 @@ public class Points extends Auditable {
     private String house;
     private Long points;
 
+    public Points() {
+    }
+
+    public Points(Integer guildId, String house, Long points) {
+        this.guildId = guildId;
+        this.house = house;
+        this.points = points;
+    }
+
     public Integer getId() {
         return id;
     }

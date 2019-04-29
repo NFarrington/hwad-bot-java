@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.services.MessageService;
 
 @Component
@@ -42,7 +43,11 @@ public class BotEventListener {
 
         client.getEventDispatcher().on(MessageCreateEvent.class)
                 .map(MessageCreateEvent::getMessage)
-                .subscribe(messageService::handle);
+                .flatMap(messageService::handle)
+                .doOnError(error -> logger.error(error.getMessage(), error))
+                .retry()
+                .subscribe();
+//                .subscribe(messageService::handle, error -> logger.error(error.getMessage(), error));
 
         client.login().block();
     }
