@@ -24,6 +24,7 @@ import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.services.MessageService;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -98,7 +99,7 @@ public class BotEventListener {
 
     private Mono<discord4j.core.object.entity.Member> deleteGuildMember(discord4j.core.object.entity.Member member) {
         xyz.nowiknowmy.hogwarts.domain.Guild myGuild = guildRepository.findByGuildId(member.getGuildId().asString());
-        memberRepository.delete(memberRepository.findByUidAndGuildId(member.getId().asString(), myGuild.getId()));
+        memberRepository.softDelete(memberRepository.findByUidAndGuildId(member.getId().asString(), myGuild.getId()).getId());
 
         return Mono.just(member);
     }
@@ -114,10 +115,11 @@ public class BotEventListener {
     }
 
     private Mono<Guild> syncGuild(Guild guild) {
-        xyz.nowiknowmy.hogwarts.domain.Guild myGuild = guildRepository.findByGuildId(guild.getId().asString());
+        xyz.nowiknowmy.hogwarts.domain.Guild myGuild = guildRepository.findByGuildIdWithTrashed(guild.getId().asString());
         if (myGuild == null) {
             myGuild = new xyz.nowiknowmy.hogwarts.domain.Guild();
         }
+        myGuild.setDeletedAt(null);
         myGuild.setGuildId(guild.getId().asString());
         myGuild.setName(guild.getName());
         guildRepository.save(myGuild);
@@ -137,7 +139,7 @@ public class BotEventListener {
             .map(member -> knownMembers.removeIf(knownMember -> knownMember.getUid().equals(member.getId().asString())))
             .then()
             .flatMap(ignored -> {
-                knownMembers.forEach(memberRepository::delete);
+                knownMembers.forEach(member -> memberRepository.softDelete(member.getId()));
                 return Mono.just(guild);
             });
     }
@@ -146,14 +148,15 @@ public class BotEventListener {
         logger.info("Syncing guild member " + member.getUsername());
         return syncUser(member).flatMap(ignored -> {
             xyz.nowiknowmy.hogwarts.domain.Guild guild = guildRepository.findByGuildId(member.getGuildId().asString());
-            Member myMember = memberRepository.findByUidAndGuildId(member.getId().asString(), guild.getId());
+            Member myMember = memberRepository.findByUidAndGuildIdWithTrashed(member.getId().asString(), guild.getId());
             if (myMember == null) {
                 logger.info(String.format("myMember is null for user %s %s %s ", member.getUsername(), member.getId().asString(), guild.getId()));
                 myMember = new Member();
                 myMember.setUid(member.getId().asString());
                 myMember.setGuildId(guild.getId());
-                myMember.setLastMessageAt(new Date());
+                myMember.setLastMessageAt(LocalDateTime.now());
             }
+            myMember.setDeletedAt(null);
             myMember.setUsername(member.getUsername());
             if (member.getNickname().isPresent()) {
                 myMember.setNickname(member.getNickname().get());

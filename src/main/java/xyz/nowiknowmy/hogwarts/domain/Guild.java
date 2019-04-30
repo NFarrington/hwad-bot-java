@@ -1,6 +1,12 @@
 package xyz.nowiknowmy.hogwarts.domain;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "guilds")
@@ -10,6 +16,7 @@ public class Guild extends Auditable {
     private Integer id;
     private String guildId;
     private String name;
+    private LocalDateTime deletedAt;
 
     public Integer getId() {
         return id;
@@ -33,5 +40,13 @@ public class Guild extends Auditable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }

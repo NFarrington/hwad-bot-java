@@ -174,7 +174,7 @@ public class MessageService {
         String inactiveMembersString = inactiveMembers.stream().map(member -> {
             String name = member.getNickname() != null ? member.getNickname() : member.getUsername();
             String lastMessage = member.getLastMessageAt() != null
-                ? ZonedDateTime.ofInstant(member.getLastMessageAt().toInstant(), zone).format(DateTimeFormatter.ofPattern("y-M-d HH:mm z").withLocale(new Locale("en", "US")))
+                ? ZonedDateTime.of(member.getLastMessageAt(), zone).format(DateTimeFormatter.ofPattern("y-M-d HH:mm z").withLocale(new Locale("en", "US")))
                 : "[unknown]";
             return String.format("%s since %s", name, lastMessage);
         }).collect(Collectors.joining("\n"));

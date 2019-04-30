@@ -1,6 +1,12 @@
 package xyz.nowiknowmy.hogwarts.domain;
 
-import javax.persistence.*;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
@@ -14,8 +20,8 @@ public class Member extends Auditable {
     private Boolean bot;
     private String username;
     private String nickname;
-    private Date lastMessageAt;
-
+    private LocalDateTime lastMessageAt;
+    private LocalDateTime deletedAt;
 
     public Integer getId() {
         return id;
@@ -65,11 +71,19 @@ public class Member extends Auditable {
         this.nickname = nickname;
     }
 
-    public Date getLastMessageAt() {
+    public LocalDateTime getLastMessageAt() {
         return lastMessageAt;
     }
 
-    public void setLastMessageAt(Date lastMessageAt) {
+    public void setLastMessageAt(LocalDateTime lastMessageAt) {
         this.lastMessageAt = lastMessageAt;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }
