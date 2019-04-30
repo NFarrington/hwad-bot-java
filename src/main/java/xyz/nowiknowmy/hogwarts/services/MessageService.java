@@ -26,6 +26,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,8 +55,12 @@ public class MessageService {
         Mono<Guild> myGuild = message.getGuild()
             .map(guild -> guild.getId().asString())
             .map(guildRepository::findByGuildId);
-        String content = message.getContent().get();
 
+        if (message.getContent().isEmpty()) {
+            return Mono.empty();
+        }
+
+        String content = message.getContent().get();
         if (Str.regex("^!(time|servertime) ?.*$").matches(content)) {
             return sendServerTime(message);
         } else if (Str.regex("^!points ?.*$").matches(content)) {
@@ -121,12 +126,46 @@ public class MessageService {
                     }
                 }).then();
         } else if (Str.regex("^!bumpyears$").matches(content)) {
-            throw new UnsupportedOperationException("Not implemented");
-        } else if (Str.regex("^!removetags$").matches(content)) {
-            throw new UnsupportedOperationException("Not implemented");
+            return message.getAuthorAsMember()
+                .filterWhen(member -> new MemberAuthorization(member).canBumpYears())
+                .map(Optional::of)
+                .defaultIfEmpty(Optional.empty())
+                .flatMap(member -> {
+                    if (member.isPresent()) {
+                        return message.getChannel()
+                            .flatMap(channel -> channel.createMessage("Updating years... this may take a minute or two!"))
+                            .then(Mono.just(message))
+                            .flatMap(this::moveYearsForward);
+                    } else {
+                        return sendError(message, "Sorry, you are not permitted to bump year groups!");
+                    }
+                }).then();
         }
 
         return Mono.empty();
+    }
+
+    private Mono<Void> moveYearsForward(Message message) {
+        Map<String, String> transitions = new HashMap<>();
+        transitions.put("First Year", "Second Year");
+        transitions.put("Second Year", "Third Year");
+        transitions.put("Third Year", "Fourth Year");
+        transitions.put("Fourth Year", "Fifth Year");
+        transitions.put("Fifth Year", "Six Year");
+        transitions.put("Sixth Year", "Seventh Year");
+        transitions.put("Seventh Year", "Graduated Year");
+
+        return message.getGuild()
+            .flatMapMany(discord4j.core.object.entity.Guild::getMembers)
+            .flatMap(member -> member.getRoles()
+                    .filter(role -> transitions.containsKey(role.getName()))
+                    .flatMap(role -> role.getGuild().flatMapMany(discord4j.core.object.entity.Guild::getRoles)
+                        .filter(guildRole -> guildRole.getName().equals(transitions.get(role.getName())))
+                        .flatMap(newRole -> member.addRole(newRole.getId()))
+                        .then(member.removeRole(role.getId()))
+                        .then()
+                    )
+            ).then();
     }
 
     private Mono<Message> sendInactiveList(Message message, Guild guild, Duration interval) {
@@ -135,7 +174,7 @@ public class MessageService {
         String inactiveMembersString = inactiveMembers.stream().map(member -> {
             String name = member.getNickname() != null ? member.getNickname() : member.getUsername();
             String lastMessage = member.getLastMessageAt() != null
-                ? ZonedDateTime.ofInstant(member.getLastMessageAt().toInstant(), zone).format(DateTimeFormatter.ofPattern("y-M-d H:mm z").withLocale(new Locale("en", "US")))
+                ? ZonedDateTime.ofInstant(member.getLastMessageAt().toInstant(), zone).format(DateTimeFormatter.ofPattern("y-M-d HH:mm z").withLocale(new Locale("en", "US")))
                 : "[unknown]";
             return String.format("%s since %s", name, lastMessage);
         }).collect(Collectors.joining("\n"));
@@ -164,7 +203,6 @@ public class MessageService {
     private Mono<Message> sendPointsUpdate(Message message, Points points) {
         return message.getChannel()
             .flatMap(channel -> {
-                logger.info("Updating channel");
                 final String house;
                 switch (points.getHouse()) {
                     case "g":

@@ -36,4 +36,11 @@ public class MemberAuthorization {
             .count()
             .map(count -> count > 0);
     }
+
+    public Mono<Boolean> canBumpYears() {
+        return member.getRoles()
+            .filter(role -> role.getPermissions().contains(Permission.ADMINISTRATOR))
+            .count()
+            .map(count -> count > 0);
+    }
 }
