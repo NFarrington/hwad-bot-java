@@ -1,9 +1,6 @@
 package xyz.nowiknowmy.hogwarts.domain;
 
 import org.hibernate.envers.Audited;
-import org.springframework.beans.factory.annotation.Autowired;
-import xyz.nowiknowmy.hogwarts.events.MemberPreSaveEvent;
-import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -15,14 +12,17 @@ import javax.persistence.PostRemove;
 import javax.persistence.PostUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 @Entity
 @Table(name = "members")
-public class Member extends Auditable implements Cloneable {
+public class Member extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -37,28 +37,18 @@ public class Member extends Auditable implements Cloneable {
     private LocalDateTime deletedAt;
 
     @Transient
-    private List<String> dirty = new ArrayList<>();
-    @Transient
-    private Member original;
+    private Map<Object, Object> originalAttributes = new HashMap<>();
 
     @PostLoad
-    public void setOriginal() throws CloneNotSupportedException {
-        clean();
-        this.original = (Member) this.clone();
-    }
-
-    public Member getOriginal() {
-        return this.original;
-    }
-
     @PostPersist
     @PostUpdate
-    public void clean() {
-        this.dirty.clear();
+    @PostRemove
+    public void clearDirtyAttributes() {
+        originalAttributes.clear();
     }
 
-    public List<String> getDirty() {
-        return dirty;
+    public Map<Object, Object> getOriginalAttributes() {
+        return originalAttributes;
     }
 
     public Integer getId() {
@@ -99,7 +89,7 @@ public class Member extends Auditable implements Cloneable {
 
     public void setUsername(String username) {
         if (!Objects.equals(username, this.username)) {
-            this.dirty.add("username");
+            originalAttributes.put("username", this.username);
         }
 
         this.username = username;
@@ -111,7 +101,7 @@ public class Member extends Auditable implements Cloneable {
 
     public void setNickname(String nickname) {
         if (!Objects.equals(nickname, this.nickname)) {
-            this.dirty.add("nickname");
+            originalAttributes.put("nickname", this.nickname);
         }
 
         this.nickname = nickname;
@@ -131,19 +121,5 @@ public class Member extends Auditable implements Cloneable {
 
     public void setDeletedAt(LocalDateTime deletedAt) {
         this.deletedAt = deletedAt;
-    }
-
-    public Object clone() throws CloneNotSupportedException {
-        Member member = (Member) super.clone();
-        member.id = id;
-        member.uid = uid;
-        member.guildId = guildId;
-        member.bot = bot;
-        member.username = username;
-        member.nickname = nickname;
-        member.lastMessageAt = lastMessageAt;
-        member.deletedAt = deletedAt;
-
-        return member;
     }
 }
