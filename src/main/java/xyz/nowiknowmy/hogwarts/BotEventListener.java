@@ -20,6 +20,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.domain.Member;
+import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.services.MessageService;
@@ -33,16 +34,18 @@ public class BotEventListener {
     private final MessageService messageService;
     private final GuildRepository guildRepository;
     private final MemberRepository memberRepository;
+    private final MemberPreSavePublisher memberPreSavePublisher;
 
     private static final Logger logger = LoggerFactory.getLogger(BotEventListener.class);
 
     @Value("${discord.bot.token}")
     private String discordBotToken;
 
-    public BotEventListener(MessageService messageService, GuildRepository guildRepository, MemberRepository memberRepository) {
+    public BotEventListener(MessageService messageService, GuildRepository guildRepository, MemberRepository memberRepository, MemberPreSavePublisher memberPreSavePublisher) {
         this.messageService = messageService;
         this.guildRepository = guildRepository;
         this.memberRepository = memberRepository;
+        this.memberPreSavePublisher = memberPreSavePublisher;
     }
 
     @Scheduled(fixedDelay = 10000)
@@ -107,6 +110,7 @@ public class BotEventListener {
         List<Member> members = memberRepository.findByUid(user.getId().asString());
         members.forEach(member -> {
             member.setUsername(user.getUsername());
+            memberPreSavePublisher.publish(member);
             memberRepository.save(member);
         });
 
@@ -162,9 +166,12 @@ public class BotEventListener {
             myMember.setUsername(member.getUsername());
             if (member.getNickname().isPresent()) {
                 myMember.setNickname(member.getNickname().get());
+            } else {
+                myMember.setNickname(null);
             }
             myMember.setBot(member.isBot());
 
+            memberPreSavePublisher.publish(myMember);
             memberRepository.save(myMember);
 
             return Mono.just(member);
