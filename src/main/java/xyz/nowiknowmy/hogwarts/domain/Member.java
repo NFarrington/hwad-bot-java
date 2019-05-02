@@ -1,13 +1,13 @@
 package xyz.nowiknowmy.hogwarts.domain;
 
-import javax.persistence.Convert;
+import org.hibernate.envers.Audited;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Entity
 @Table(name = "members")
@@ -18,7 +18,9 @@ public class Member extends Auditable {
     private String uid;
     private Integer guildId;
     private Boolean bot;
+    @Audited
     private String username;
+    @Audited
     private String nickname;
     private LocalDateTime lastMessageAt;
     private LocalDateTime deletedAt;

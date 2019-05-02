@@ -25,7 +25,6 @@ import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.services.MessageService;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 @Component
@@ -53,11 +52,11 @@ public class BotEventListener {
         final DiscordClient client = new DiscordClientBuilder(discordBotToken).build();
 
         client.getEventDispatcher().on(ReadyEvent.class)
-                .subscribe(ready -> logger.info("Logged in as " + ready.getSelf().getUsername() + " @ " + System.currentTimeMillis() / 1000));
+            .subscribe(ready -> logger.info("Logged in as " + ready.getSelf().getUsername() + " @ " + System.currentTimeMillis() / 1000));
         client.getEventDispatcher().on(DisconnectEvent.class)
-                .subscribe(disconnect -> logger.error("Disconnected @ " + System.currentTimeMillis() / 1000));
+            .subscribe(disconnect -> logger.error("Disconnected @ " + System.currentTimeMillis() / 1000));
         client.getEventDispatcher().on(ReconnectEvent.class)
-                .subscribe(reconnect -> logger.error("Reconnected @ " + System.currentTimeMillis() / 1000));
+            .subscribe(reconnect -> logger.error("Reconnected @ " + System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(GuildCreateEvent.class)
             .map(GuildCreateEvent::getGuild)
@@ -87,11 +86,11 @@ public class BotEventListener {
             .subscribe(member -> logger.info(String.format("Member leave event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
 
         client.getEventDispatcher().on(MessageCreateEvent.class)
-                .map(MessageCreateEvent::getMessage)
-                .flatMap(messageService::handle)
-                .doOnError(error -> logger.error(error.getMessage(), error))
-                .retry()
-                .subscribe();
+            .map(MessageCreateEvent::getMessage)
+            .flatMap(messageService::handle)
+            .doOnError(error -> logger.error(error.getMessage(), error))
+            .retry()
+            .subscribe();
 //                .subscribe(messageService::handle, error -> logger.error(error.getMessage(), error));
 
         client.login().block();
@@ -134,7 +133,10 @@ public class BotEventListener {
         List<Member> knownMembers = memberRepository.findByGuildId(myGuild.getId());
 
         return guild.getMembers()
-            .map(member -> { logger.info("syncGuildMembers, about to sync member: " + member.getUsername()); return member;})
+            .map(member -> {
+                logger.info("syncGuildMembers, about to sync member: " + member.getUsername());
+                return member;
+            })
             .flatMap(this::syncGuildMember)
             .map(member -> knownMembers.removeIf(knownMember -> knownMember.getUid().equals(member.getId().asString())))
             .then()

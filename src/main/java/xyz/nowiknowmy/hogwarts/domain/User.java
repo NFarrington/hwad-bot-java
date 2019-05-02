@@ -1,8 +1,10 @@
 package xyz.nowiknowmy.hogwarts.domain;
 
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
 @Entity
 @Table(name = "users")
@@ -49,7 +51,7 @@ public class User extends Auditable {
     @Override
     public String toString() {
         return "User{" +
-                ", username='" + username + '\'' +
-                '}';
+            ", username='" + username + '\'' +
+            '}';
     }
 }

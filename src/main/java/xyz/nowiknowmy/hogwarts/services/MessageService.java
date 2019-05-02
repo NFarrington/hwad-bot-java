@@ -1,9 +1,6 @@
 package xyz.nowiknowmy.hogwarts.services;
 
-import discord4j.core.object.Embed;
 import discord4j.core.object.entity.Message;
-import discord4j.core.spec.EmbedCreateSpec;
-import discord4j.core.spec.MessageCreateSpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -25,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -158,13 +154,13 @@ public class MessageService {
         return message.getGuild()
             .flatMapMany(discord4j.core.object.entity.Guild::getMembers)
             .flatMap(member -> member.getRoles()
-                    .filter(role -> transitions.containsKey(role.getName()))
-                    .flatMap(role -> role.getGuild().flatMapMany(discord4j.core.object.entity.Guild::getRoles)
-                        .filter(guildRole -> guildRole.getName().equals(transitions.get(role.getName())))
-                        .flatMap(newRole -> member.addRole(newRole.getId()))
-                        .then(member.removeRole(role.getId()))
-                        .then()
-                    )
+                .filter(role -> transitions.containsKey(role.getName()))
+                .flatMap(role -> role.getGuild().flatMapMany(discord4j.core.object.entity.Guild::getRoles)
+                    .filter(guildRole -> guildRole.getName().equals(transitions.get(role.getName())))
+                    .flatMap(newRole -> member.addRole(newRole.getId()))
+                    .then(member.removeRole(role.getId()))
+                    .then()
+                )
             ).then();
     }
 
