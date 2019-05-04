@@ -1,39 +1,11 @@
-plugins {
-    id 'java'
-    id 'org.springframework.boot' version '2.1.4.RELEASE'
-    id 'io.spring.dependency-management' version '1.0.7.RELEASE'
-}
-
-repositories {
-    mavenCentral()
-}
-
-configurations.all {
-    resolutionStrategy {
-        failOnVersionConflict()
+allprojects {
+    repositories {
+        jcenter()
     }
-}
 
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.hibernate:hibernate-envers', 'org.glassfish.jaxb:jaxb-runtime'
-    implementation 'com.h2database:h2'
-    implementation 'org.mariadb.jdbc:mariadb-java-client:2.4.1'
-    implementation 'org.liquibase:liquibase-core:3.6.3'
-    implementation 'com.discord4j:discord4j-core:3.0.3'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-}
-
-jar {
-    enabled = true
-}
-
-bootJar {
-    classifier = 'boot'
-}
-
-bootRun {
-    systemProperty 'spring.profiles.active', 'dev'
+    configurations.all {
+        resolutionStrategy {
+            failOnVersionConflict()
+        }
+    }
 }
