@@ -6,6 +6,7 @@ import discord4j.core.object.entity.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.authorization.MemberAuthorization;
@@ -79,6 +80,7 @@ public class MessageService {
             return sendPointsSummary(message, myGuild);
         } else if (Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").matches(messageContent)) {
             List<String> regexMatches = Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").groups(messageContent);
+            regexMatches.set(1, StringUtils.capitalize(regexMatches.get(1)));
 
             boolean memberHasHouse = memberRoles.stream().anyMatch(role ->
                 Str.regex("^(Gryffindor|Hufflepuff|Ravenclaw|Slytherin)$", Pattern.CASE_INSENSITIVE).matches(role.getName()));
@@ -136,10 +138,9 @@ public class MessageService {
                 .filter(role -> transitions.containsKey(role.getName()))
                 .flatMap(oldRole -> Flux.fromIterable(guildRoles)
                     .filter(guildRole -> guildRole.getName().equals(transitions.get(oldRole.getName())))
-                    .flatMap(newRole -> member.addRole(newRole.getId()))
-                    .then(member.removeRole(oldRole.getId()))
-                    .then()
-                )
+                    .flatMap(newRole -> Flux.concat(member.addRole(newRole.getId()), member.removeRole(oldRole.getId())))
+                    .then(Mono.empty())
+                ).then(Mono.empty())
             ).then(Mono.empty());
     }
 
