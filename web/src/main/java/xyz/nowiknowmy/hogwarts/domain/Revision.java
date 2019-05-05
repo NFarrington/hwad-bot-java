@@ -1,9 +1,11 @@
 package xyz.nowiknowmy.hogwarts.domain;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.Table;
 
 @Entity
@@ -14,9 +16,12 @@ public class Revision extends Auditable {
     private Long id;
     private String modelType;
     private Long modelId;
-    private Long userId;
+    private Integer userId;
+    @Column(name = "\"key\"")
     private String key;
+    @Lob
     private String oldValue;
+    @Lob
     private String newValue;
 
     public Long getId() {
@@ -43,11 +48,11 @@ public class Revision extends Auditable {
         this.modelId = modelId;
     }
 
-    public Long getUserId() {
+    public Integer getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(Integer userId) {
         this.userId = userId;
     }
 
