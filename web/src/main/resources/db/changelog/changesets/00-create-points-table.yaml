@@ -1,0 +1,38 @@
+---
+
+databaseChangeLog:
+  - changeSet:
+      id: points-1
+      author: nfarrington
+      comment: create points table
+      changes:
+        - createTable:
+            tableName: points
+            columns:
+              - column:
+                  name: id
+                  type: int unsigned
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: guild_id
+                  type: int unsigned
+                  constraints:
+                    nullable: false
+              - column:
+                  name: house
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: points
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+              - column:
+                  name: updated_at
+                  type: timestamp

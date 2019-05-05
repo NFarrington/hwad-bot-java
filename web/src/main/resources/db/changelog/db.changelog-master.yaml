@@ -1,4 +1,24 @@
 ---
 
 databaseChangeLog:
-  - changeset:
+  - include:
+      file: changesets/00-create-guilds-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changesets/00-create-points-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changesets/00-create-revinfo-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changesets/00-create-users-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changesets/01-create-members-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changesets/01-create-members_aud-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changesets/01-create-revisions-table.yaml
+      relativeToChangelogFile: true

@@ -1,0 +1,32 @@
+---
+
+databaseChangeLog:
+  - changeSet:
+      id: members_aud-1
+      author: nfarrington
+      comment: create members_aud table
+      changes:
+        - createTable:
+            tableName: members_aud
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: rev
+                  type: int
+                  constraints:
+                    primaryKey: true
+                    references: revinfo(rev)
+                    foreignKeyName: fk_rev
+              - column:
+                  name: revtype
+                  type: tinyint
+              - column:
+                  name: nickname
+                  type: varchar(255)
+              - column:
+                  name: username
+                  type: varchar(255)

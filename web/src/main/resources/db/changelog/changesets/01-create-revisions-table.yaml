@@ -1,0 +1,58 @@
+---
+
+databaseChangeLog:
+  - changeSet:
+      id: revisions-1
+      author: nfarrington
+      comment: create revisions table
+      changes:
+        - createTable:
+            tableName: revisions
+            columns:
+              - column:
+                  name: id
+                  type: bigint unsigned
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: model_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: model_id
+                  type: bigint unsigned
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: int unsigned
+                  constraints:
+                    references: users(id)
+                    foreignKeyName: fk_user_id
+              - column:
+                  name: key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: old_value
+                  type: clob
+              - column:
+                  name: new_value
+                  type: clob
+              - column:
+                  name: created_at
+                  type: timestamp
+              - column:
+                  name: updated_at
+                  type: timestamp
+        - createIndex:
+            indexName: model_type_model_id
+            tableName: revisions
+            columns:
+              - column:
+                  name: model_type
+              - column:
+                  name: model_id

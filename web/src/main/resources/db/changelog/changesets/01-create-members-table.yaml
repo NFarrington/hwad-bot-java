@@ -1,0 +1,53 @@
+---
+
+databaseChangeLog:
+  - changeSet:
+      id: members-1
+      author: nfarrington
+      comment: create members table
+      changes:
+        - createTable:
+            tableName: members
+            columns:
+              - column:
+                  name: id
+                  type: int unsigned
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: uid
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: guild_id
+                  type: int unsigned
+                  constraints:
+                    nullable: false
+              - column:
+                  name: bot
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: username
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: nickname
+                  type: varchar(255)
+              - column:
+                  name: last_message_at
+                  type: timestamp
+              - column:
+                  name: created_at
+                  type: timestamp
+              - column:
+                  name: updated_at
+                  type: timestamp
+              - column:
+                  name: deleted_at
+                  type: timestamp
