@@ -117,7 +117,8 @@ public class MessageService {
             }
 
             return channel.createMessage("Updating years... this may take a minute or two!")
-                .then(moveYearsForward(guild, guildRoles));
+                .flatMap(sentMessage -> moveYearsForward(guild, guildRoles)
+                    .then(sentMessage.edit(editSpec -> editSpec.setContent("Updating years... done!"))));
         }
 
         return Mono.empty();
