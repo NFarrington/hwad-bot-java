@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.session:spring-session-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'io.pebbletemplates:pebble-spring-boot-2-starter:3.0.9'
     implementation 'org.json:json:20180813'
