@@ -19,6 +19,10 @@ public class MemberRevisionListener implements ApplicationListener<MemberPreSave
     public void onApplicationEvent(MemberPreSaveEvent event) {
         Member member = event.getMember();
 
+        if (member.getId() == null) {
+            return;
+        }
+
         if (member.getOriginalAttributes().containsKey("username")) {
             Revision revision = initialiseRevision(member);
             revision.setKey("username");

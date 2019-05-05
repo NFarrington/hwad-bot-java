@@ -65,27 +65,37 @@ public class BotEventListener {
             .map(GuildCreateEvent::getGuild)
             .flatMap(this::syncGuild)
             .map(Guild::getName)
+            .doOnError(error -> logger.error(error.getMessage(), error))
+            .retry()
             .subscribe(guildName -> logger.info("Guild create event " + guildName + " @ " + System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(UserUpdateEvent.class)
             .map(UserUpdateEvent::getCurrent)
             .flatMap(this::syncUser)
+            .doOnError(error -> logger.error(error.getMessage(), error))
+            .retry()
             .subscribe(user -> logger.info("User update event " + user.getUsername() + " @ " + System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(MemberJoinEvent.class)
             .map(MemberJoinEvent::getMember)
             .flatMap(this::syncGuildMember)
+            .doOnError(error -> logger.error(error.getMessage(), error))
+            .retry()
             .subscribe(member -> logger.info(String.format("Member join event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
 
         client.getEventDispatcher().on(MemberUpdateEvent.class)
             .flatMap(MemberUpdateEvent::getMember)
             .flatMap(this::syncGuildMember)
+            .doOnError(error -> logger.error(error.getMessage(), error))
+            .retry()
             .subscribe(member -> logger.info(String.format("Member update event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
 
         client.getEventDispatcher().on(MemberLeaveEvent.class)
             .filter(event -> event.getMember().isPresent())
             .map(event -> event.getMember().get())
             .flatMap(this::deleteGuildMember)
+            .doOnError(error -> logger.error(error.getMessage(), error))
+            .retry()
             .subscribe(member -> logger.info(String.format("Member leave event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
 
         client.getEventDispatcher().on(MessageCreateEvent.class)
@@ -94,7 +104,6 @@ public class BotEventListener {
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()
             .subscribe();
-//                .subscribe(messageService::handle, error -> logger.error(error.getMessage(), error));
 
         client.login().block();
     }
