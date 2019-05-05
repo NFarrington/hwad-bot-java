@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.domain.Member;
 import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
+import xyz.nowiknowmy.hogwarts.events.discord.MemberEvent;
+import xyz.nowiknowmy.hogwarts.events.discord.MessageEvent;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.services.MessageService;
@@ -99,7 +101,7 @@ public class BotEventListener {
             .subscribe(member -> logger.info(String.format("Member leave event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
 
         client.getEventDispatcher().on(MessageCreateEvent.class)
-            .map(MessageCreateEvent::getMessage)
+            .flatMap(MessageEvent::parse)
             .flatMap(messageService::handle)
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()
