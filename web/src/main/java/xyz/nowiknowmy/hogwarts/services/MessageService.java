@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TimeZone;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -171,7 +173,7 @@ public class MessageService {
         String inactiveMembersString = inactiveMembers.stream().map(member -> {
             String name = member.getNickname() != null ? member.getNickname() : member.getUsername();
             String lastMessage = member.getLastMessageAt() != null
-                ? ZonedDateTime.of(member.getLastMessageAt(), OffsetDateTime.now().getOffset()).withZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z").withLocale(new Locale("en", "US")))
+                ? ZonedDateTime.of(member.getLastMessageAt(), TimeZone.getDefault().toZoneId()).withZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z").withLocale(new Locale("en", "US")))
                 : "[unknown]";
             return String.format("%s since %s", name, lastMessage);
         }).collect(Collectors.joining("\n"));

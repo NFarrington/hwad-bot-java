@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 @Controller
@@ -177,7 +178,7 @@ public class WebController {
                 change[0] = revision.getKey();
                 change[1] = revision.getOldValue();
                 change[2] = revision.getNewValue();
-                change[3] = ZonedDateTime.of(revision.getCreatedAt(), OffsetDateTime.now().getOffset()).withZoneSameInstant(ZoneId.of("America/New_York"))
+                change[3] = ZonedDateTime.of(revision.getCreatedAt(), TimeZone.getDefault().toZoneId()).withZoneSameInstant(ZoneId.of("America/New_York"))
                     .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z").withLocale(new Locale("en", "US")));
                 return change;
             }).toArray(String[][]::new);
