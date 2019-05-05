@@ -15,12 +15,12 @@ public interface MemberRepository extends SoftDeleteCrudRepository<Member, Strin
     @Query("select m from Member m where m.uid = :uid and m.deletedAt is null")
     List<Member> findByUid(String uid);
 
-    @Query("select m from Member m where m.uid = :uid AND m.guildId = :guildId and m.deletedAt is null")
+    @Query("select m from Member m where m.uid = :uid and m.guildId = :guildId and m.deletedAt is null")
     Member findByUidAndGuildId(String uid, Integer guildId);
 
-    @Query("select m from Member m where m.uid = :uid AND m.guildId = :guildId")
+    @Query("select m from Member m where m.uid = :uid and m.guildId = :guildId")
     Member findByUidAndGuildIdWithTrashed(String uid, Integer guildId);
 
-    @Query("SELECT m FROM Member m WHERE m.guildId = :guildId AND (m.lastMessageAt <= :inactiveSince OR m.lastMessageAt IS NULL) AND m.bot = false ORDER BY m.lastMessageAt DESC")
+    @Query("select m from Member m where m.guildId = :guildId and (m.lastMessageAt <= :inactiveSince or m.lastMessageAt is null) and m.bot = false and m.deletedAt is null order by m.lastMessageAt desc")
     List<Member> findInactiveMembers(Integer guildId, LocalDateTime inactiveSince);
 }
