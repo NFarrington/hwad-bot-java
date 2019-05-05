@@ -19,6 +19,7 @@ import xyz.nowiknowmy.hogwarts.repositories.PointsRepository;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -170,7 +171,7 @@ public class MessageService {
         String inactiveMembersString = inactiveMembers.stream().map(member -> {
             String name = member.getNickname() != null ? member.getNickname() : member.getUsername();
             String lastMessage = member.getLastMessageAt() != null
-                ? ZonedDateTime.of(member.getLastMessageAt(), zone).format(DateTimeFormatter.ofPattern("y-M-d HH:mm z").withLocale(new Locale("en", "US")))
+                ? ZonedDateTime.of(member.getLastMessageAt(), OffsetDateTime.now().getOffset()).withZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z").withLocale(new Locale("en", "US")))
                 : "[unknown]";
             return String.format("%s since %s", name, lastMessage);
         }).collect(Collectors.joining("\n"));

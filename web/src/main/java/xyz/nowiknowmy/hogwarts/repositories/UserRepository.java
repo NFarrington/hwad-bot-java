@@ -6,5 +6,6 @@ import xyz.nowiknowmy.hogwarts.domain.User;
 
 @Repository
 public interface UserRepository extends CrudRepository<User, Integer> {
+    User findByUid(String uid);
     User findByUsername(String name);
 }
