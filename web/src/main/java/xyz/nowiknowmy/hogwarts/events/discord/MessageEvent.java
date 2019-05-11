@@ -1,6 +1,5 @@
 package xyz.nowiknowmy.hogwarts.events.discord;
 
-import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;

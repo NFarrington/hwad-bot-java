@@ -40,7 +40,7 @@ public class BotEventListener {
 
     private static final Logger logger = LoggerFactory.getLogger(BotEventListener.class);
 
-    @Value("${discord.bot.token}")
+    @Value("${discord.bot-token}")
     private String discordBotToken;
 
     public BotEventListener(MessageService messageService, GuildRepository guildRepository, MemberRepository memberRepository, MemberPreSavePublisher memberPreSavePublisher) {
@@ -188,10 +188,4 @@ public class BotEventListener {
             return Mono.just(member);
         });
     }
-
-//    private void syncGuilds(Set<Guild> guilds) {
-//        for (Guild guild : guilds) {
-//            syncGuild(guild);
-//        }
-//    }
 }

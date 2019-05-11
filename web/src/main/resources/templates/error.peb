@@ -12,7 +12,13 @@
     <title>Error</title>
 </head>
 <body>
-<h1>{{ errorMsg }}</h1>
+
+<h1>An error occurred</h1>
+
+<p>Error: {{ status }} {{ error }}</p>
+<p>Message: {{ message }}</p>
+<p>Path: {{ path }}</p>
+<p>Timestamp: {{ timestamp }}</p>
 
 <!-- Optional JavaScript -->
 <!-- jQuery first, then Popper.js, then Bootstrap JS -->

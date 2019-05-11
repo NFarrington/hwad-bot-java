@@ -1,50 +1,30 @@
 package xyz.nowiknowmy.hogwarts.controllers;
 
+import org.springframework.boot.autoconfigure.web.ServerProperties;
+import org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController;
+import org.springframework.boot.autoconfigure.web.servlet.error.ErrorViewResolver;
+import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 @Controller
-public class ErrorController implements org.springframework.boot.web.servlet.error.ErrorController {
+public class ErrorController extends BasicErrorController {
 
-    @RequestMapping(value = "/error-handler")
-    public ModelAndView renderErrorPage(HttpServletRequest httpRequest) {
-
-        ModelAndView errorPage = new ModelAndView("errorPage");
-        String errorMsg;
-        int httpErrorCode = getErrorCode(httpRequest);
-
-        switch (httpErrorCode) {
-            case 400:
-                errorMsg = "400 Bad Request";
-                break;
-            case 401:
-                errorMsg = "401 Unauthorized";
-                break;
-            case 404:
-                errorMsg = "404 Not Found";
-                break;
-            case 500:
-                errorMsg = "500 Internal Server Error";
-                break;
-            default:
-                errorMsg = "An error occurred: code " + httpErrorCode;
-                break;
-        }
-        errorPage.addObject("errorMsg", errorMsg);
-        return errorPage;
+    public ErrorController(ErrorAttributes errorAttributes, ServerProperties serverProperties, List<ErrorViewResolver> errorViewResolvers) {
+        super(errorAttributes, serverProperties.getError(), errorViewResolvers);
     }
 
-    private int getErrorCode(HttpServletRequest httpRequest) {
-        return (Integer) httpRequest
-            .getAttribute("javax.servlet.error.status_code");
-    }
-
-    @Override
-    public String getErrorPath() {
-        return "/error-handler";
-    }
+//    @RequestMapping(produces = MediaType.TEXT_HTML_VALUE)
+//    @Override
+//    public ModelAndView errorHtml(HttpServletRequest request,
+//                                  HttpServletResponse response) {
+//        HttpStatus status = getStatus(request);
+//        Map<String, Object> model = Collections.unmodifiableMap(getErrorAttributes(
+//            request, isIncludeStackTrace(request, MediaType.TEXT_HTML)));
+//        response.setStatus(status.value());
+//        ModelAndView modelAndView = resolveErrorView(request, response, status, model);
+//        return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);
+//    }
 
 }
