@@ -1,6 +1,5 @@
 package xyz.nowiknowmy.hogwarts.events;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import xyz.nowiknowmy.hogwarts.domain.Member;
@@ -14,7 +13,6 @@ public class MemberPreSavePublisher {
     }
 
     public void publish(Member member) {
-        System.out.println("Publishing custom event. ");
         MemberPreSaveEvent customSpringEvent = new MemberPreSaveEvent(this, member);
         applicationEventPublisher.publishEvent(customSpringEvent);
     }

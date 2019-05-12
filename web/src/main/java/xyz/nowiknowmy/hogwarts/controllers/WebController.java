@@ -7,8 +7,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
@@ -32,8 +30,6 @@ import java.util.stream.Collectors;
 
 @Controller
 public class WebController {
-
-    private static final Logger logger = LoggerFactory.getLogger(WebController.class);
 
     @Value("${discord.base-url}")
     String discordBaseUrl;

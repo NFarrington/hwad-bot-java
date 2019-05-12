@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import xyz.nowiknowmy.hogwarts.exceptions.UnexpectedAccessException;
 
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
@@ -30,19 +31,21 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Bean
     public OAuth2AuthorizedClientService authorizedClientService() {
         return new OAuth2AuthorizedClientService() {
+            private static final String EXCEPTION_MESSAGE = "OAuth2AuthorizedClientService is unused and should not be called.";
+
             @Override
             public <T extends OAuth2AuthorizedClient> T loadAuthorizedClient(String clientRegistrationId, String principalName) {
-                throw new RuntimeException("OAuth2AuthorizedClientService is unused and should not be called.");
+                throw new UnexpectedAccessException(EXCEPTION_MESSAGE);
             }
 
             @Override
             public void saveAuthorizedClient(OAuth2AuthorizedClient authorizedClient, Authentication principal) {
-                throw new RuntimeException("OAuth2AuthorizedClientService is unused and should not be called.");
+                throw new UnexpectedAccessException(EXCEPTION_MESSAGE);
             }
 
             @Override
             public void removeAuthorizedClient(String clientRegistrationId, String principalName) {
-                throw new RuntimeException("OAuth2AuthorizedClientService is unused and should not be called.");
+                throw new UnexpectedAccessException(EXCEPTION_MESSAGE);
             }
         };
     }

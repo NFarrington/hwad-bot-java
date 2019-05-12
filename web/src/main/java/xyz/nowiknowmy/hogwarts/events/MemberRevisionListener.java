@@ -9,6 +9,9 @@ import xyz.nowiknowmy.hogwarts.repositories.RevisionRepository;
 @Component
 public class MemberRevisionListener implements ApplicationListener<MemberPreSaveEvent> {
 
+    private static final String KEY_USERNAME = "username";
+    private static final String KEY_NICKNAME = "nickname";
+
     private final RevisionRepository revisionRepository;
 
     public MemberRevisionListener(RevisionRepository revisionRepository) {
@@ -23,18 +26,18 @@ public class MemberRevisionListener implements ApplicationListener<MemberPreSave
             return;
         }
 
-        if (member.getOriginalAttributes().containsKey("username")) {
+        if (member.getOriginalAttributes().containsKey(KEY_USERNAME)) {
             Revision revision = initialiseRevision(member);
-            revision.setKey("username");
-            revision.setOldValue((String) member.getOriginalAttributes().get("username"));
+            revision.setKey(KEY_USERNAME);
+            revision.setOldValue((String) member.getOriginalAttributes().get(KEY_USERNAME));
             revision.setNewValue(member.getUsername());
             revisionRepository.save(revision);
         }
 
-        if (member.getOriginalAttributes().containsKey("nickname")) {
+        if (member.getOriginalAttributes().containsKey(KEY_NICKNAME)) {
             Revision revision = initialiseRevision(member);
-            revision.setKey("nickname");
-            revision.setOldValue((String) member.getOriginalAttributes().get("nickname"));
+            revision.setKey(KEY_NICKNAME);
+            revision.setOldValue((String) member.getOriginalAttributes().get(KEY_NICKNAME));
             revision.setNewValue(member.getNickname());
             revisionRepository.save(revision);
         }

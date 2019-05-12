@@ -6,10 +6,11 @@ import xyz.nowiknowmy.hogwarts.domain.Member;
 public class MemberPreSaveEvent extends ApplicationEvent {
     private final Member member;
 
-    public MemberPreSaveEvent(Object source, Member member) {
+    MemberPreSaveEvent(Object source, Member member) {
         super(source);
         this.member = member;
     }
+
     public Member getMember() {
         return member;
     }

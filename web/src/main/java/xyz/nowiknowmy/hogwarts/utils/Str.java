@@ -1,4 +1,4 @@
-package xyz.nowiknowmy.hogwarts.helpers;
+package xyz.nowiknowmy.hogwarts.utils;
 
 import java.util.ArrayList;
 import java.util.List;

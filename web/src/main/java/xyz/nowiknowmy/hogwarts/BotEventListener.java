@@ -21,7 +21,6 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.domain.Member;
 import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
-import xyz.nowiknowmy.hogwarts.events.discord.MemberEvent;
 import xyz.nowiknowmy.hogwarts.events.discord.MessageEvent;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
@@ -52,16 +51,16 @@ public class BotEventListener {
 
     @Scheduled(fixedDelay = 10000)
     public void scheduleFixedDelayTask() {
-        logger.info("Starting Discord bot @ " + System.currentTimeMillis() / 1000);
+        logger.info("Starting Discord bot @ {}'", System.currentTimeMillis() / 1000);
 
         final DiscordClient client = new DiscordClientBuilder(discordBotToken).build();
 
         client.getEventDispatcher().on(ReadyEvent.class)
-            .subscribe(ready -> logger.info("Logged in as " + ready.getSelf().getUsername() + " @ " + System.currentTimeMillis() / 1000));
+            .subscribe(ready -> logger.info("Logged in as {} @ {}", ready.getSelf().getUsername(), System.currentTimeMillis() / 1000));
         client.getEventDispatcher().on(DisconnectEvent.class)
-            .subscribe(disconnect -> logger.error("Disconnected @ " + System.currentTimeMillis() / 1000));
+            .subscribe(disconnect -> logger.error("Disconnected @ {}", System.currentTimeMillis() / 1000));
         client.getEventDispatcher().on(ReconnectEvent.class)
-            .subscribe(reconnect -> logger.error("Reconnected @ " + System.currentTimeMillis() / 1000));
+            .subscribe(reconnect -> logger.error("Reconnected @ {}", System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(GuildCreateEvent.class)
             .map(GuildCreateEvent::getGuild)
@@ -69,28 +68,28 @@ public class BotEventListener {
             .map(Guild::getName)
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()
-            .subscribe(guildName -> logger.info("Guild create event " + guildName + " @ " + System.currentTimeMillis() / 1000));
+            .subscribe(guildName -> logger.info("Guild create event {} @ {}", guildName, System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(UserUpdateEvent.class)
             .map(UserUpdateEvent::getCurrent)
             .flatMap(this::syncUser)
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()
-            .subscribe(user -> logger.info("User update event " + user.getUsername() + " @ " + System.currentTimeMillis() / 1000));
+            .subscribe(user -> logger.info("User update event {} @ {}", user.getUsername(), System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(MemberJoinEvent.class)
             .map(MemberJoinEvent::getMember)
             .flatMap(this::syncGuildMember)
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()
-            .subscribe(member -> logger.info(String.format("Member join event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
+            .subscribe(member -> logger.info("Member join event {} @ {}", member.getUsername(), System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(MemberUpdateEvent.class)
             .flatMap(MemberUpdateEvent::getMember)
             .flatMap(this::syncGuildMember)
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()
-            .subscribe(member -> logger.info(String.format("Member update event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
+            .subscribe(member -> logger.info("Member update event {} @ {}", member.getUsername(), System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(MemberLeaveEvent.class)
             .filter(event -> event.getMember().isPresent())
@@ -98,7 +97,7 @@ public class BotEventListener {
             .flatMap(this::deleteGuildMember)
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()
-            .subscribe(member -> logger.info(String.format("Member leave event %s @ %s", member.getUsername(), System.currentTimeMillis() / 1000)));
+            .subscribe(member -> logger.info("Member leave event {} @ {}", member.getUsername(), System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(MessageCreateEvent.class)
             .flatMap(MessageEvent::parse)
@@ -143,13 +142,13 @@ public class BotEventListener {
     }
 
     private Mono<Guild> syncGuildMembers(Guild guild) {
-        logger.info("Syncing guild members for guild " + guild.getName());
+        logger.info("Syncing guild members for guild {}", guild.getName());
         xyz.nowiknowmy.hogwarts.domain.Guild myGuild = guildRepository.findByGuildId(guild.getId().asString());
         List<Member> knownMembers = memberRepository.findByGuildId(myGuild.getId());
 
         return guild.getMembers()
             .map(member -> {
-                logger.info("syncGuildMembers, about to sync member: " + member.getUsername());
+                logger.info("syncGuildMembers, about to sync member: {}", member.getUsername());
                 return member;
             })
             .flatMap(this::syncGuildMember)
@@ -162,12 +161,11 @@ public class BotEventListener {
     }
 
     private Mono<discord4j.core.object.entity.Member> syncGuildMember(discord4j.core.object.entity.Member member) {
-        logger.info("Syncing guild member " + member.getUsername());
+        logger.info("Syncing guild member {}", member.getUsername());
         return syncUser(member).flatMap(ignored -> {
             xyz.nowiknowmy.hogwarts.domain.Guild guild = guildRepository.findByGuildId(member.getGuildId().asString());
             Member myMember = memberRepository.findByUidAndGuildIdWithTrashed(member.getId().asString(), guild.getId());
             if (myMember == null) {
-                logger.info(String.format("myMember is null for user %s %s %s ", member.getUsername(), member.getId().asString(), guild.getId()));
                 myMember = new Member();
                 myMember.setUid(member.getId().asString());
                 myMember.setGuildId(guild.getId());

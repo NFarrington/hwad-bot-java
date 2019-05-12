@@ -3,21 +3,23 @@ package xyz.nowiknowmy.hogwarts.services;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.Role;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import xyz.nowiknowmy.hogwarts.authorization.MemberAuthorization;
 import xyz.nowiknowmy.hogwarts.domain.Guild;
 import xyz.nowiknowmy.hogwarts.domain.Member;
 import xyz.nowiknowmy.hogwarts.domain.Points;
 import xyz.nowiknowmy.hogwarts.events.discord.MessageEvent;
-import xyz.nowiknowmy.hogwarts.helpers.Str;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.repositories.PointsRepository;
+import xyz.nowiknowmy.hogwarts.utils.MemberAuthorization;
+import xyz.nowiknowmy.hogwarts.utils.Str;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -51,20 +53,21 @@ public class MessageService {
         this.memberRepository = memberRepository;
     }
 
+    @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
     public Mono<Message> handle(MessageEvent event) {
-        MessageChannel channel = event.getChannel();
-        Message message = event.getMessage();
+        MessageChannel discordChannel = event.getChannel();
+        Message discordMessage = event.getMessage();
 
-        String messageContent = message.getContent().isPresent() ? message.getContent().get() : "";
+        String messageContent = discordMessage.getContent().orElse("");
         if (messageContent.isEmpty()) {
             return Mono.empty();
         }
 
-        discord4j.core.object.entity.Guild guild = event.getGuild();
-        discord4j.core.object.entity.Member member = event.getMember();
-        if (guild == null || member == null) {
-            logger.info(String.format("Received a message without a guild and/or member. Guild: %s; Member: %s; Message: \"%s\")",
-                event.getGuild(), event.getMember(), messageContent));
+        discord4j.core.object.entity.Guild discordGuild = event.getGuild();
+        discord4j.core.object.entity.Member discordMember = event.getMember();
+        if (discordGuild == null || discordMember == null) {
+            logger.info("Received a message without a guild and/or member. Guild: {}; Member: {}; Message: \"{}\")",
+                event.getGuild(), event.getMember(), messageContent);
 
             return Mono.empty();
         }
@@ -72,29 +75,36 @@ public class MessageService {
         List<Role> guildRoles = Objects.requireNonNull(event.getGuildRoles());
         List<Role> memberRoles = Objects.requireNonNull(event.getMemberRoles());
 
-        Guild myGuild = guildRepository.findByGuildId(guild.getId().asString());
+        Guild myGuild = guildRepository.findByGuildId(discordGuild.getId().asString());
 
+        return processMessageContents(discordChannel, messageContent, discordGuild, discordMember, guildRoles, memberRoles, myGuild);
+    }
+
+    private Mono<Message> processMessageContents(
+        MessageChannel channel,
+        String messageContent,
+        discord4j.core.object.entity.Guild guild,
+        discord4j.core.object.entity.Member member,
+        List<Role> guildRoles,
+        List<Role> memberRoles,
+        Guild myGuild
+    ) {
         if (Str.regex("^!(time|servertime) ?.*$").matches(messageContent)) {
-            return sendServerTime(message);
+            return sendServerTime(channel);
         } else if (Str.regex("^!points ?.*$").matches(messageContent)) {
-            return sendPointsSummary(message, myGuild);
+            return sendPointsSummary(channel, myGuild);
         } else if (Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").matches(messageContent)) {
             List<String> regexMatches = Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").groups(messageContent);
             regexMatches.set(1, StringUtils.capitalize(regexMatches.get(1)));
 
-            boolean memberHasHouse = memberRoles.stream().anyMatch(role ->
-                Str.regex("^(Gryffindor|Hufflepuff|Ravenclaw|Slytherin)$", Pattern.CASE_INSENSITIVE).matches(role.getName()));
-            if (memberHasHouse) {
+            if (memberHasAHouse(memberRoles)) {
                 return sendError(channel, "Sorry, you already have a house!");
             }
 
-            Optional<Role> role = guildRoles.stream().filter(guildRole -> guildRole.getName().compareToIgnoreCase(regexMatches.get(1)) == 0).findFirst();
-            if (role.isEmpty()) {
-                return sendError(channel, String.format("Sorry, we could not find a role called %s!", regexMatches.get(1)));
-            }
-
-            return member.addRole(role.get().getId())
-                .then(channel.createMessage(String.format("You are now a member of %s!", regexMatches.get(1))));
+            return findRoleByName(regexMatches.get(1), guildRoles)
+                .map(value -> member.addRole(value.getId())
+                    .then(channel.createMessage(String.format("You are now a member of %s!", regexMatches.get(1)))))
+                .orElseGet(() -> sendError(channel, String.format("Sorry, we could not find a role called %s!", regexMatches.get(1))));
         } else if (Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").matches(messageContent)) {
             if (!MemberAuthorization.canModifyPoints(memberRoles)) {
                 return sendError(channel, "Sorry, you are not permitted to modify house points!");
@@ -122,6 +132,17 @@ public class MessageService {
         }
 
         return Mono.empty();
+    }
+
+    private Optional<Role> findRoleByName(String roleName, List<Role> roles) {
+        return roles.stream()
+            .filter(role -> role.getName().compareToIgnoreCase(roleName) == 0)
+            .findFirst();
+    }
+
+    private static boolean memberHasAHouse(List<Role> memberRoles) {
+        return memberRoles.stream().anyMatch(role ->
+            Str.regex("^(Gryffindor|Hufflepuff|Ravenclaw|Slytherin)$", Pattern.CASE_INSENSITIVE).matches(role.getName()));
     }
 
     private Mono<Message> moveYearsForward(discord4j.core.object.entity.Guild guild, List<Role> guildRoles) {
@@ -160,7 +181,7 @@ public class MessageService {
             return channel.createMessage("No inactive members were found.");
         }
 
-        if (inactiveMembersString.getBytes().length > 2042) {
+        if (inactiveMembersString.length() > 2042) {
             inactiveMembersString = inactiveMembersString.substring(0, 2039) + "...";
         }
 
@@ -194,7 +215,7 @@ public class MessageService {
     }
 
     private Points updatePoints(Guild guild, String house, String operation, String points) {
-        logger.info(String.format("Updating points for %s, %s %s %s", guild.getId(), house, operation, points));
+        logger.info("Updating points for {}, {} {} {}", guild.getId(), house, operation, points);
 
         Points currentPoints = pointsRepository.findByGuildIdAndHouse(guild.getId(), house);
         if (currentPoints == null) {
@@ -203,11 +224,11 @@ public class MessageService {
 
         switch (operation) {
             case "add":
-                currentPoints.setPoints(currentPoints.getPoints() + Long.valueOf(points));
+                currentPoints.setPoints(currentPoints.getPoints() + Long.parseLong(points));
                 break;
             case "sub":
             case "subtract":
-                currentPoints.setPoints(currentPoints.getPoints() - Long.valueOf(points));
+                currentPoints.setPoints(currentPoints.getPoints() - Long.parseLong(points));
                 break;
             case "set":
                 currentPoints.setPoints(Long.valueOf(points));
@@ -225,31 +246,26 @@ public class MessageService {
         return channel.createMessage(errorMessage);
     }
 
-    private Mono<Message> sendServerTime(Message message) {
-        return message.getChannel()
-            .flatMap(channel -> {
-                ZonedDateTime zdt = ZonedDateTime.now(zone);
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("h:mma z")
-                    .withLocale(new Locale("en", "US"));
-                String time = dtf.format(zdt);
+    private Mono<Message> sendServerTime(MessageChannel channel) {
+        ZonedDateTime zdt = ZonedDateTime.now(zone);
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("h:mma z")
+            .withLocale(new Locale("en", "US"));
+        String time = dtf.format(zdt);
 
-                String timeMessage = String.format("It is currently %s.", time);
-                return channel.createMessage(timeMessage);
-            });
+        String timeMessage = String.format("It is currently %s.", time);
+
+        return channel.createMessage(timeMessage);
     }
 
-    private Mono<Message> sendPointsSummary(Message message, Guild guild) {
-        return message.getChannel()
-            .flatMap(channel -> {
-                Map<String, Long> points = pointsRepository.findByGuildId(guild.getId())
-                    .stream().collect(Collectors.toMap(Points::getHouse, Points::getPoints));
-                String pointsMessage = String.format("Gryffindor: %s\nHufflepuff: %s\nRavenclaw: %s\nSlytherin: %s\n",
-                    points.getOrDefault("g", 0L),
-                    points.getOrDefault("h", 0L),
-                    points.getOrDefault("r", 0L),
-                    points.getOrDefault("s", 0L));
+    private Mono<Message> sendPointsSummary(MessageChannel channel, Guild guild) {
+        Map<String, Long> points = pointsRepository.findByGuildId(guild.getId())
+            .stream().collect(Collectors.toMap(Points::getHouse, Points::getPoints));
+        String pointsMessage = String.format("Gryffindor: %s%nHufflepuff: %s%nRavenclaw: %s%nSlytherin: %s%n",
+            points.getOrDefault("g", 0L),
+            points.getOrDefault("h", 0L),
+            points.getOrDefault("r", 0L),
+            points.getOrDefault("s", 0L));
 
-                return channel.createMessage(pointsMessage);
-            });
+        return channel.createMessage(pointsMessage);
     }
 }

@@ -15,16 +15,4 @@ public class ErrorController extends BasicErrorController {
         super(errorAttributes, serverProperties.getError(), errorViewResolvers);
     }
 
-//    @RequestMapping(produces = MediaType.TEXT_HTML_VALUE)
-//    @Override
-//    public ModelAndView errorHtml(HttpServletRequest request,
-//                                  HttpServletResponse response) {
-//        HttpStatus status = getStatus(request);
-//        Map<String, Object> model = Collections.unmodifiableMap(getErrorAttributes(
-//            request, isIncludeStackTrace(request, MediaType.TEXT_HTML)));
-//        response.setStatus(status.value());
-//        ModelAndView modelAndView = resolveErrorView(request, response, status, model);
-//        return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);
-//    }
-
 }

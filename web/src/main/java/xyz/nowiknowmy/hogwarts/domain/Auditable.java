@@ -6,15 +6,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.EntityListeners;
 import javax.persistence.MappedSuperclass;
+import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
-abstract class Auditable {
+abstract class Auditable implements Serializable {
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -24,13 +21,6 @@ abstract class Auditable {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-
-//    public String getCreatedAt(String zoneId) {
-//        ZoneId zone = ZoneId.of(zoneId);
-//
-//        return ZonedDateTime.of(this.getCreatedAt(), zone).format(DateTimeFormatter.ofPattern("y-M-d HH:mm z")
-//            .withLocale(new Locale("en", "US")));
-//    }
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;

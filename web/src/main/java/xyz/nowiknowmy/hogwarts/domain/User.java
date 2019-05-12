@@ -15,9 +15,10 @@ public class User extends Auditable implements Serializable {
     private Integer id;
     private String uid;
     private String username;
-    private String remember_token;
+    private String rememberToken;
 
     public User() {
+        //
     }
 
     public User(String uid, String username) {
@@ -47,6 +48,14 @@ public class User extends Auditable implements Serializable {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getRememberToken() {
+        return rememberToken;
+    }
+
+    public void setRememberToken(String rememberToken) {
+        this.rememberToken = rememberToken;
     }
 
     @Override

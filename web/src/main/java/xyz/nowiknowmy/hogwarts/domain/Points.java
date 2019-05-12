@@ -17,6 +17,7 @@ public class Points extends Auditable {
     private Long points;
 
     public Points() {
+        //
     }
 
     public Points(Integer guildId, String house, Long points) {
