@@ -1,4 +1,4 @@
-package xyz.nowiknowmy.hogwarts;
+package xyz.nowiknowmy.hogwarts.tasks;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
@@ -24,25 +24,25 @@ import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
 import xyz.nowiknowmy.hogwarts.domain.discord.message.ReceivedMessageFactory;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
-import xyz.nowiknowmy.hogwarts.services.MessageService;
+import xyz.nowiknowmy.hogwarts.services.MessageHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
-public class BotEventListener {
+public class DiscordBot {
 
-    private final MessageService messageService;
+    private final MessageHandler messageService;
     private final GuildRepository guildRepository;
     private final MemberRepository memberRepository;
     private final MemberPreSavePublisher memberPreSavePublisher;
 
-    private static final Logger logger = LoggerFactory.getLogger(BotEventListener.class);
+    private static final Logger logger = LoggerFactory.getLogger(DiscordBot.class);
 
     @Value("${discord.bot-token}")
     private String discordBotToken;
 
-    public BotEventListener(MessageService messageService, GuildRepository guildRepository, MemberRepository memberRepository, MemberPreSavePublisher memberPreSavePublisher) {
+    public DiscordBot(MessageHandler messageService, GuildRepository guildRepository, MemberRepository memberRepository, MemberPreSavePublisher memberPreSavePublisher) {
         this.messageService = messageService;
         this.guildRepository = guildRepository;
         this.memberRepository = memberRepository;

@@ -38,9 +38,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
-public class MessageService {
+public class MessageHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
+    private static final Logger logger = LoggerFactory.getLogger(MessageHandler.class);
 
     private final GuildRepository guildRepository;
     private final PointsRepository pointsRepository;
@@ -48,7 +48,7 @@ public class MessageService {
 
     private static final ZoneId zone = ZoneId.of("America/New_York");
 
-    public MessageService(GuildRepository guildRepository, PointsRepository pointsRepository, MemberRepository memberRepository) {
+    public MessageHandler(GuildRepository guildRepository, PointsRepository pointsRepository, MemberRepository memberRepository) {
         this.guildRepository = guildRepository;
         this.pointsRepository = pointsRepository;
         this.memberRepository = memberRepository;

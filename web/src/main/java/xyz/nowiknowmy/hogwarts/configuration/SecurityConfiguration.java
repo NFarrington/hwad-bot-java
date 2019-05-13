@@ -1,4 +1,4 @@
-package xyz.nowiknowmy.hogwarts;
+package xyz.nowiknowmy.hogwarts.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;

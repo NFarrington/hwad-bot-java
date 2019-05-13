@@ -1,4 +1,4 @@
-package xyz.nowiknowmy.hogwarts;
+package xyz.nowiknowmy.hogwarts.configuration;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
