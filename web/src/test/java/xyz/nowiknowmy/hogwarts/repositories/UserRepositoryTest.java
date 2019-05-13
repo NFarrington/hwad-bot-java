@@ -10,11 +10,17 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import xyz.nowiknowmy.hogwarts.domain.User;
 
-import static org.junit.Assert.*;
+import java.util.Collection;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@ActiveProfiles("test")
 public class UserRepositoryTest {
+
     @Autowired
     private UserRepository userRepository;
 
@@ -22,9 +28,9 @@ public class UserRepositoryTest {
     public void setUp() {
         User user1 = new User("12345678901234567890", "Alice");
         User user2 = new User("12345678901234567891", "Bob");
-        //save user, verify has ID value after save
+
         assertNull(user1.getId());
-        assertNull(user2.getId());//null before save
+        assertNull(user2.getId());
         this.userRepository.save(user1);
         this.userRepository.save(user2);
         assertNotNull(user1.getId());
@@ -39,18 +45,13 @@ public class UserRepositoryTest {
 
     @Test
     public void testFetchData() {
-        /*Test data retrieval*/
         User userA = userRepository.findByUsername("Bob");
         assertNotNull(userA);
         assertEquals("Bob", userA.getUsername());
         assertNotNull(userA.getCreatedAt());
 
-        /*Get all products, list should only have two*/
-        Iterable<User> users = userRepository.findAll();
-        int count = 0;
-        for (User p : users) {
-            count++;
-        }
-        assertEquals(2, count);
+        Collection<User> users = (Collection<User>) userRepository.findAll();
+        assertEquals(2, users.size());
     }
+
 }
