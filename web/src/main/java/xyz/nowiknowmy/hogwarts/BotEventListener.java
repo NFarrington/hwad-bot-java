@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.domain.Member;
 import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
-import xyz.nowiknowmy.hogwarts.events.discord.MessageEvent;
+import xyz.nowiknowmy.hogwarts.domain.discord.message.ReceivedMessageFactory;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.services.MessageService;
@@ -51,7 +51,7 @@ public class BotEventListener {
 
     @Scheduled(fixedDelay = 10000)
     public void scheduleFixedDelayTask() {
-        logger.info("Starting Discord bot @ {}'", System.currentTimeMillis() / 1000);
+        logger.info("Starting Discord bot @ {}", System.currentTimeMillis() / 1000);
 
         final DiscordClient client = new DiscordClientBuilder(discordBotToken).build();
 
@@ -100,7 +100,8 @@ public class BotEventListener {
             .subscribe(member -> logger.info("Member leave event {} @ {}", member.getUsername(), System.currentTimeMillis() / 1000));
 
         client.getEventDispatcher().on(MessageCreateEvent.class)
-            .flatMap(MessageEvent::parse)
+            .flatMap(ReceivedMessageFactory::load)
+            .map(ReceivedMessageFactory::create)
             .flatMap(messageService::handle)
             .doOnError(error -> logger.error(error.getMessage(), error))
             .retry()

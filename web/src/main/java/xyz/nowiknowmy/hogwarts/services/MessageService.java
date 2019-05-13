@@ -3,18 +3,20 @@ package xyz.nowiknowmy.hogwarts.services;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.Role;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.domain.Guild;
 import xyz.nowiknowmy.hogwarts.domain.Member;
 import xyz.nowiknowmy.hogwarts.domain.Points;
-import xyz.nowiknowmy.hogwarts.events.discord.MessageEvent;
+import xyz.nowiknowmy.hogwarts.domain.discord.message.GuildMemberMessage;
+import xyz.nowiknowmy.hogwarts.domain.discord.message.GuildWebhookMessage;
+import xyz.nowiknowmy.hogwarts.domain.discord.message.ReceivedMessage;
+import xyz.nowiknowmy.hogwarts.domain.discord.message.PrivateUserMessage;
+import xyz.nowiknowmy.hogwarts.exceptions.UnknownMessageException;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.repositories.PointsRepository;
@@ -30,7 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
@@ -53,81 +54,85 @@ public class MessageService {
         this.memberRepository = memberRepository;
     }
 
-    @SuppressFBWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
-    public Mono<Message> handle(MessageEvent event) {
-        MessageChannel discordChannel = event.getChannel();
-        Message discordMessage = event.getMessage();
-
-        String messageContent = discordMessage.getContent().orElse("");
-        if (messageContent.isEmpty()) {
-            return Mono.empty();
+    public Mono<Message> handle(ReceivedMessage messageDetails) {
+        if (messageDetails instanceof GuildMemberMessage) {
+            return handleGuildMemberMessage((GuildMemberMessage) messageDetails);
         }
 
-        discord4j.core.object.entity.Guild discordGuild = event.getGuild();
-        discord4j.core.object.entity.Member discordMember = event.getMember();
-        if (discordGuild == null || discordMember == null) {
-            logger.info("Received a message without a guild and/or member. Guild: {}; Member: {}; Message: \"{}\")",
-                event.getGuild(), event.getMember(), messageContent);
-
-            return Mono.empty();
+        if (messageDetails instanceof GuildWebhookMessage) {
+            return handleGuildWebhookMessage((GuildWebhookMessage) messageDetails);
         }
 
-        List<Role> guildRoles = Objects.requireNonNull(event.getGuildRoles());
-        List<Role> memberRoles = Objects.requireNonNull(event.getMemberRoles());
+        if (messageDetails instanceof PrivateUserMessage) {
+            return handlePrivateUserMessage((PrivateUserMessage) messageDetails);
+        }
 
-        Guild myGuild = guildRepository.findByGuildId(discordGuild.getId().asString());
-
-        return processMessageContents(discordChannel, messageContent, discordGuild, discordMember, guildRoles, memberRoles, myGuild);
+        throw new UnknownMessageException("Unknown message type: " + messageDetails.getClass().getName());
     }
 
-    private Mono<Message> processMessageContents(
-        MessageChannel channel,
-        String messageContent,
-        discord4j.core.object.entity.Guild guild,
-        discord4j.core.object.entity.Member member,
-        List<Role> guildRoles,
-        List<Role> memberRoles,
-        Guild myGuild
-    ) {
-        if (Str.regex("^!(time|servertime) ?.*$").matches(messageContent)) {
-            return sendServerTime(channel);
+    private Mono<Message> handlePrivateUserMessage(PrivateUserMessage messageDetails) {
+        logger.info("Received a private message from \"{}\". Message: \"{}\")",
+            messageDetails.getUser(),
+            messageDetails.getMessage().getContent().orElse(""));
+
+        return Mono.empty();
+    }
+
+    private Mono<Message> handleGuildMemberMessage(GuildMemberMessage messageDetails) {
+        // TODO: check for null
+        Guild myGuild = guildRepository.findByGuildId(messageDetails.getGuild().getId().asString());
+
+        return processMessageContents(messageDetails, myGuild);
+    }
+
+    private Mono<Message> handleGuildWebhookMessage(GuildWebhookMessage messageDetails) {
+        return Mono.empty();
+    }
+
+    private Mono<Message> processMessageContents(GuildMemberMessage messageDetails, Guild myGuild) {
+        String messageContent = messageDetails.getMessageContent();
+
+        if (messageDetails.getMessageContent().isEmpty()) {
+            return Mono.empty();
+        } else if (Str.regex("^!(time|servertime) ?.*$").matches(messageContent)) {
+            return sendServerTime(messageDetails.getChannel());
         } else if (Str.regex("^!points ?.*$").matches(messageContent)) {
-            return sendPointsSummary(channel, myGuild);
+            return sendPointsSummary(messageDetails.getChannel(), myGuild);
         } else if (Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").matches(messageContent)) {
             List<String> regexMatches = Str.regex("^!(gryffindor|hufflepuff|ravenclaw|slytherin) ?.*$").groups(messageContent);
             regexMatches.set(1, StringUtils.capitalize(regexMatches.get(1)));
 
-            if (memberHasAHouse(memberRoles)) {
-                return sendError(channel, "Sorry, you already have a house!");
+            if (memberHasAHouse(messageDetails.getMemberRoles())) {
+                return sendError(messageDetails.getChannel(), "Sorry, you already have a house!");
             }
 
-            return findRoleByName(regexMatches.get(1), guildRoles)
-                .map(value -> member.addRole(value.getId())
-                    .then(channel.createMessage(String.format("You are now a member of %s!", regexMatches.get(1)))))
-                .orElseGet(() -> sendError(channel, String.format("Sorry, we could not find a role called %s!", regexMatches.get(1))));
+            return findRoleByName(regexMatches.get(1), messageDetails.getGuildRoles())
+                .map(value -> messageDetails.getMember().addRole(value.getId())
+                    .then(messageDetails.getChannel().createMessage(String.format("You are now a member of %s!", regexMatches.get(1)))))
+                .orElseGet(() -> sendError(messageDetails.getChannel(), String.format("Sorry, we could not find a role called %s!", regexMatches.get(1))));
         } else if (Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").matches(messageContent)) {
-            if (!MemberAuthorization.canModifyPoints(memberRoles)) {
-                return sendError(channel, "Sorry, you are not permitted to modify house points!");
+            if (!MemberAuthorization.canModifyPoints(messageDetails.getMemberRoles())) {
+                return sendError(messageDetails.getChannel(), "Sorry, you are not permitted to modify house points!");
             }
 
             List<String> regexMatches = Str.regex("^!([ghrs]) (add|sub|subtract|set) (\\d+)$").groups(messageContent);
             Points points = updatePoints(myGuild, regexMatches.get(1), regexMatches.get(2), regexMatches.get(3));
-            return sendPointsUpdate(channel, points);
+            return sendPointsUpdate(messageDetails.getChannel(), points);
         } else if (Str.regex("^!inactive (\\d+[d|m|y])$").matches(messageContent)) {
-            if (!MemberAuthorization.canListInactive(memberRoles)) {
-                return sendError(channel, "Sorry, you are not permitted to list inactive members!");
+            if (!MemberAuthorization.canListInactive(messageDetails.getMemberRoles())) {
+                return sendError(messageDetails.getChannel(), "Sorry, you are not permitted to list inactive members!");
             }
 
             List<String> regexMatches = Str.regex("^!inactive (\\d+[d|m|y])$").groups(messageContent);
             Duration interval = Duration.parse("P" + regexMatches.get(1).toUpperCase());
-            return sendInactiveList(channel, myGuild, interval);
+            return sendInactiveList(messageDetails.getChannel(), myGuild, interval);
         } else if (Str.regex("^!bumpyears$").matches(messageContent)) {
-            if (!MemberAuthorization.canBumpYears(memberRoles)) {
-                return sendError(channel, "Sorry, you are not permitted to bump year groups!");
+            if (!MemberAuthorization.canBumpYears(messageDetails.getMemberRoles())) {
+                return sendError(messageDetails.getChannel(), "Sorry, you are not permitted to bump year groups!");
             }
 
-            return channel.createMessage("Updating years... this may take a minute or two!")
-                .flatMap(sentMessage -> moveYearsForward(guild, guildRoles)
+            return messageDetails.getChannel().createMessage("Updating years... this may take a minute or two!")
+                .flatMap(sentMessage -> moveYearsForward(messageDetails.getGuild(), messageDetails.getGuildRoles())
                     .then(sentMessage.edit(editSpec -> editSpec.setContent("Updating years... done!"))));
         }
 
