@@ -1,5 +1,6 @@
 package xyz.nowiknowmy.hogwarts.configuration;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
@@ -10,10 +11,14 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import xyz.nowiknowmy.hogwarts.security.OAuth2SuccessHandler;
 import xyz.nowiknowmy.hogwarts.exceptions.UnexpectedAccessException;
 
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    OAuth2SuccessHandler successHandler;
 
     @Override
     public void configure(WebSecurity web) throws Exception {
@@ -25,7 +30,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.authorizeRequests()
             .antMatchers("/").permitAll()
             .anyRequest().authenticated()
-            .and().oauth2Login();
+            .and().oauth2Login().successHandler(successHandler);
     }
 
     @Bean
