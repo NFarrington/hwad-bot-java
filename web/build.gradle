@@ -44,3 +44,7 @@ bootJar {
 bootRun {
     systemProperty 'spring.profiles.active', 'dev'
 }
+
+test {
+    systemProperty 'user.timezone', 'UTC'
+}

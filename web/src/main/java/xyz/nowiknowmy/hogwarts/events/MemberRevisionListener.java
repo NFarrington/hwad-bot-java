@@ -27,28 +27,22 @@ public class MemberRevisionListener implements ApplicationListener<MemberPreSave
         }
 
         if (member.getOriginalAttributes().containsKey(KEY_USERNAME)) {
-            Revision revision = initialiseRevision(member);
-            revision.setKey(KEY_USERNAME);
-            revision.setOldValue((String) member.getOriginalAttributes().get(KEY_USERNAME));
-            revision.setNewValue(member.getUsername());
+            Revision revision = new Revision("App\\Models\\Member",
+                member.getId().longValue(),
+                KEY_USERNAME,
+                (String) member.getOriginalAttributes().get(KEY_USERNAME),
+                member.getUsername());
             revisionRepository.save(revision);
         }
 
         if (member.getOriginalAttributes().containsKey(KEY_NICKNAME)) {
-            Revision revision = initialiseRevision(member);
-            revision.setKey(KEY_NICKNAME);
-            revision.setOldValue((String) member.getOriginalAttributes().get(KEY_NICKNAME));
-            revision.setNewValue(member.getNickname());
+            Revision revision = new Revision("App\\Models\\Member",
+                member.getId().longValue(),
+                KEY_NICKNAME,
+                (String) member.getOriginalAttributes().get(KEY_NICKNAME),
+                member.getNickname());
             revisionRepository.save(revision);
         }
     }
 
-    private Revision initialiseRevision(Member member)
-    {
-        Revision revision = new Revision();
-        revision.setModelType("App\\Models\\Member");
-        revision.setModelId(member.getId().longValue());
-
-        return revision;
-    }
 }

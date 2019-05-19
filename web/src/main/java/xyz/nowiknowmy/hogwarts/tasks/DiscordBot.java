@@ -13,6 +13,7 @@ import discord4j.core.event.domain.lifecycle.ReconnectEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.User;
+import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,8 +21,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import xyz.nowiknowmy.hogwarts.domain.Member;
-import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
 import xyz.nowiknowmy.hogwarts.domain.discord.message.ReceivedMessageFactory;
+import xyz.nowiknowmy.hogwarts.events.MemberPreSavePublisher;
+import xyz.nowiknowmy.hogwarts.exceptions.MissingEntityException;
 import xyz.nowiknowmy.hogwarts.repositories.GuildRepository;
 import xyz.nowiknowmy.hogwarts.repositories.MemberRepository;
 import xyz.nowiknowmy.hogwarts.services.MessageHandler;
@@ -131,11 +133,12 @@ public class DiscordBot {
     private Mono<Guild> syncGuild(Guild guild) {
         xyz.nowiknowmy.hogwarts.domain.Guild myGuild = guildRepository.findByGuildIdWithTrashed(guild.getId().asString());
         if (myGuild == null) {
-            myGuild = new xyz.nowiknowmy.hogwarts.domain.Guild();
+            myGuild = new xyz.nowiknowmy.hogwarts.domain.Guild(guild.getId().asString(), guild.getName());
+        } else {
+            myGuild.setGuildId(guild.getId().asString());
+            myGuild.setName(guild.getName());
+            myGuild.setDeletedAt(null);
         }
-        myGuild.setDeletedAt(null);
-        myGuild.setGuildId(guild.getId().asString());
-        myGuild.setName(guild.getName());
         guildRepository.save(myGuild);
 
         return syncGuildMembers(guild)
@@ -145,6 +148,10 @@ public class DiscordBot {
     private Mono<Guild> syncGuildMembers(Guild guild) {
         logger.info("Syncing guild members for guild {}", guild.getName());
         xyz.nowiknowmy.hogwarts.domain.Guild myGuild = guildRepository.findByGuildId(guild.getId().asString());
+        if (myGuild == null) {
+            throw new MissingEntityException(String.format("Guild %s is missing.", guild.getId().asString()));
+        }
+
         List<Member> knownMembers = memberRepository.findByGuildId(myGuild.getId());
 
         return guild.getMembers()
@@ -165,20 +172,19 @@ public class DiscordBot {
         logger.info("Syncing guild member {}", member.getUsername());
         return syncUser(member).flatMap(ignored -> {
             xyz.nowiknowmy.hogwarts.domain.Guild guild = guildRepository.findByGuildId(member.getGuildId().asString());
+            if (guild == null) {
+                throw new MissingEntityException(String.format("Guild %s is missing.", member.getGuildId().asString()));
+            }
+
             Member myMember = memberRepository.findByUidAndGuildIdWithTrashed(member.getId().asString(), guild.getId());
             if (myMember == null) {
-                myMember = new Member();
-                myMember.setUid(member.getId().asString());
-                myMember.setGuildId(guild.getId());
-                myMember.setLastMessageAt(LocalDateTime.now());
-            }
-            myMember.setDeletedAt(null);
-            myMember.setUsername(member.getUsername());
-            if (member.getNickname().isPresent()) {
-                myMember.setNickname(member.getNickname().get());
+                myMember = new Member(member.getId().asString(),
+                    guild.getId(), member.getUsername(), LocalDateTime.now());
             } else {
-                myMember.setNickname(null);
+                myMember.setUsername(member.getUsername());
+                myMember.setDeletedAt(null);
             }
+            myMember.setNickname(member.getNickname().orElse(null));
             myMember.setBot(member.isBot());
 
             memberPreSavePublisher.publish(myMember);

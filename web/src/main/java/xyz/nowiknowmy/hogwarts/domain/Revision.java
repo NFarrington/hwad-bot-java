@@ -7,6 +7,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.Table;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "revisions")
@@ -23,6 +24,18 @@ public class Revision extends Auditable {
     private String oldValue;
     @Lob
     private String newValue;
+
+    protected Revision() {
+        //
+    }
+
+    public Revision(String modelType, Long modelId, String key, String oldValue, String newValue) {
+        this.modelType = modelType;
+        this.modelId = modelId;
+        this.key = key;
+        this.oldValue = oldValue;
+        this.newValue = newValue;
+    }
 
     public Long getId() {
         return id;

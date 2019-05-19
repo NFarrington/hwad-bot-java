@@ -2,6 +2,7 @@ package xyz.nowiknowmy.hogwarts.domain;
 
 import org.hibernate.envers.Audited;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -25,16 +26,25 @@ public class Member extends Auditable {
     private Integer id;
     private String uid;
     private Integer guildId;
-    private Boolean bot;
-    @Audited
-    private String username;
-    @Audited
-    private String nickname;
+    private Boolean bot = false;
+    private @Audited String username;
+    private @Audited String nickname;
     private LocalDateTime lastMessageAt;
     private LocalDateTime deletedAt;
 
     @Transient
     private Map<Object, Object> originalAttributes = new HashMap<>();
+
+    protected Member() {
+        //
+    }
+
+    public Member(String uid, Integer guildId, String username, LocalDateTime lastMessageAt) {
+        this.uid = uid;
+        this.guildId = guildId;
+        this.username = username;
+        this.lastMessageAt = lastMessageAt;
+    }
 
     @PostLoad
     @PostPersist

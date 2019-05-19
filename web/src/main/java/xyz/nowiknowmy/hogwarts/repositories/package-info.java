@@ -1,4 +1,4 @@
 @NonNullApi
-package xyz.nowiknowmy.hogwarts.events.discord;
+package xyz.nowiknowmy.hogwarts.repositories;
 
 import org.springframework.lang.NonNullApi;

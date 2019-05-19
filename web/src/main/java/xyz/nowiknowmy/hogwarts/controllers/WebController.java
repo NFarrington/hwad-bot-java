@@ -74,7 +74,7 @@ public class WebController {
             .map(Guild::getId)
             .collect(Collectors.toList());
 
-        List<Revision> changes = revisionRepository.findUsernameAndNickname("App\\Models\\Member", guilds);
+        List<Revision> changes = revisionRepository.findByGuildIdWhereKeyIsUsernameOrNickname("App\\Models\\Member", guilds);
         String[][] changesView = changes.stream()
             .map(revision -> {
                 String[] change = new String[4];

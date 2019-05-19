@@ -17,6 +17,15 @@ public class Guild extends Auditable {
     private String name;
     private LocalDateTime deletedAt;
 
+    protected Guild() {
+        //
+    }
+
+    public Guild(String guildId, String name) {
+        this.guildId = guildId;
+        this.name = name;
+    }
+
     public Integer getId() {
         return id;
     }

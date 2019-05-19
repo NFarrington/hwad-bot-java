@@ -10,6 +10,7 @@ import java.util.List;
 
 @NoRepositoryBean
 public interface SoftDeleteCrudRepository<T, ID> extends CrudRepository<T, ID> {
+
     @Override
     @Query("select e from #{#entityName} e where e.deletedAt is null")
     List<T> findAll();
@@ -18,4 +19,5 @@ public interface SoftDeleteCrudRepository<T, ID> extends CrudRepository<T, ID> {
     @Modifying
     @Transactional
     void softDelete(Integer id);
+
 }

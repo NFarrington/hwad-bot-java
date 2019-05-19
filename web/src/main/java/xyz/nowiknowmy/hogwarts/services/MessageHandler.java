@@ -173,7 +173,7 @@ public class MessageHandler {
 
     private Mono<Message> sendInactiveList(MessageChannel channel, Guild guild, Duration interval) {
         LocalDateTime inactiveSince = LocalDateTime.now().minus(interval);
-        List<Member> inactiveMembers = memberRepository.findInactiveMembers(guild.getId(), inactiveSince);
+        List<Member> inactiveMembers = memberRepository.findByGuildIdAndLastMessageBefore(guild.getId(), inactiveSince);
         String inactiveMembersString = inactiveMembers.stream().map(member -> {
             String name = member.getNickname() != null ? member.getNickname() : member.getUsername();
             String lastMessage = member.getLastMessageAt() != null
