@@ -1,4 +1,10 @@
 allprojects {
+    buildscript {
+        repositories {
+            jcenter()
+        }
+    }
+
     repositories {
         jcenter()
     }
@@ -8,4 +14,7 @@ allprojects {
             failOnVersionConflict()
         }
     }
+
+    group = 'xyz.nowiknowmy.discord'
+    version = '1.0.0-SNAPSHOT'
 }

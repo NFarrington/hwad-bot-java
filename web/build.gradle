@@ -1,12 +1,15 @@
 plugins {
     id 'java'
-    id 'com.github.spotbugs' version '1.7.1'
     id 'org.springframework.boot' version '2.1.4.RELEASE'
     id 'io.spring.dependency-management' version '1.0.7.RELEASE'
+
+    id 'com.palantir.docker' version '0.22.1'
 }
 
 sourceCompatibility = '11'
 targetCompatibility = '11'
+
+archivesBaseName = 'hogwarts-discord-bot'
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -38,7 +41,7 @@ jar {
 }
 
 bootJar {
-    classifier = 'boot'
+    baseName = jar.baseName + '-boot'
 }
 
 bootRun {
@@ -47,4 +50,10 @@ bootRun {
 
 test {
     systemProperty 'user.timezone', 'UTC'
+}
+
+docker {
+    name "nfarrington/hogwarts-discord-bot"
+    files tasks.bootJar.outputs
+    buildArgs(['JAR_FILE': "${bootJar.archiveName}"])
 }
