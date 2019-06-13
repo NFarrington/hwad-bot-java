@@ -1,3 +1,5 @@
+import groovy.time.TimeCategory
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '2.1.4.RELEASE'
@@ -50,10 +52,40 @@ bootRun {
 
 test {
     systemProperty 'user.timezone', 'UTC'
+
+    testLogging {
+        exceptionFormat "full"
+        System.getenv('CI')
+            ? events("passed", "skipped", "failed")
+            : events("skipped", "failed")
+    }
+
+    afterSuite { suite, result ->
+        if (suite.parent) return
+        printTestResults ":${test.project.name}:${test.name} results: ${result.resultType} " +
+            "(" +
+            "${result.testCount} tests, " +
+            "${result.successfulTestCount} successes, " +
+            "${result.failedTestCount} failures, " +
+            "${result.skippedTestCount} skipped" +
+            ") " +
+            "in ${TimeCategory.minus(new Date(result.endTime), new Date(result.startTime))}"
+    }
 }
 
 docker {
-    name "nfarrington/hogwarts-discord-bot"
-    files tasks.bootJar.outputs
+    name 'nfarrington/hogwarts-discord-bot'
+    files bootJar.outputs
     buildArgs(['JAR_FILE': "${bootJar.archiveName}"])
+    tag 'release', "nfarrington/hogwarts-discord-bot:$version"
+    tag 'snapshot', "nfarrington/hogwarts-discord-bot:$version"
+}
+
+private static void printTestResults(String results) {
+    int maxLength = results.readLines().collect { it.length() }.max()
+    println "┌${"${"─" * maxLength}"}┐"
+    println results.readLines().collect {
+            "│" + it + " " * (maxLength - it.length()) + "│"
+        }.join("\n")
+    println "└${"${"─" * maxLength}"}┘"
 }

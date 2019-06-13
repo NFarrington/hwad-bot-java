@@ -14,7 +14,4 @@ allprojects {
             failOnVersionConflict()
         }
     }
-
-    group = 'xyz.nowiknowmy.discord'
-    version = '1.0.0-SNAPSHOT'
 }

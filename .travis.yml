@@ -1,0 +1,47 @@
+---
+language: java
+
+jdk:
+  - openjdk11
+  - oraclejdk11
+
+services:
+  - docker
+
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+
+install: true
+
+jobs:
+  include:
+    - stage: Deploy to Docker
+      script: true
+      before_deploy:
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      deploy:
+        - provider: script
+          script: ./gradlew dockerTagSnapshot dockerPushSnapshot -Pversion=branch_$TRAVIS_BRANCH
+          on:
+            all_branches: true
+            tags: false
+        - provider: script
+          before_script: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          script: ./gradlew dockerTagRelease dockerPushRelease -Pversion=${TRAVIS_TAG/#v/}
+          on:
+            tags: true
+    - stage: Deploy to GitHub
+      script: ./gradlew assemble -Pversion=${TRAVIS_TAG/#v/}
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file: web/build/libs/hogwarts-discord-bot-boot-${TRAVIS_TAG/#v/}.jar
+        skip-cleanup: true
+        on:
+          tags: true
