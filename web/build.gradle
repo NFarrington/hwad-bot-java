@@ -2,7 +2,7 @@ import groovy.time.TimeCategory
 
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '2.1.4.RELEASE'
+    id 'org.springframework.boot' version '2.1.8.RELEASE'
     id 'io.spring.dependency-management' version '1.0.7.RELEASE'
 
     id 'com.palantir.docker' version '0.22.1'
