@@ -92,6 +92,15 @@ public class MessageHandler {
     private Mono<Message> processMessageContents(GuildMemberMessage messageDetails, Guild myGuild) {
         String messageContent = messageDetails.getMessageContent();
 
+        Member member = memberRepository.findByUidAndGuildId(messageDetails.getMember().getId().toString(), myGuild.getId());
+        if (member != null) {
+            logger.info(String.format("Logging message from %s (%s)", messageDetails.getMember().getNickname(), messageDetails.getMember().getUsername()));
+            member.setLastMessageAt(LocalDateTime.now());
+            memberRepository.save(member);
+        } else {
+            logger.warn(String.format("Failed to log message from %s (%s)", messageDetails.getMember().getNickname(), messageDetails.getMember().getUsername()));
+        }
+
         if (messageDetails.getMessageContent().isEmpty()) {
             return Mono.empty();
         } else if (Str.regex("^!(time|servertime) ?.*$").matches(messageContent)) {
