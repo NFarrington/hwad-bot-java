@@ -93,6 +93,7 @@ public class MessageHandler {
         String messageContent = messageDetails.getMessageContent();
 
         Member member = memberRepository.findByUidAndGuildId(messageDetails.getMember().getId().toString(), myGuild.getId());
+        logger.info(String.format("%s %s", messageDetails.getMember().getId().toString(), myGuild.getId()));
         if (member != null) {
             logger.info(String.format("Logging message from %s (%s)", messageDetails.getMember().getNickname(), messageDetails.getMember().getUsername()));
             member.setLastMessageAt(LocalDateTime.now());
