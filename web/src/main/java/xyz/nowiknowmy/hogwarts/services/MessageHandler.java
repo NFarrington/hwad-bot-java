@@ -92,7 +92,7 @@ public class MessageHandler {
     private Mono<Message> processMessageContents(GuildMemberMessage messageDetails, Guild myGuild) {
         String messageContent = messageDetails.getMessageContent();
 
-        Member member = memberRepository.findByUidAndGuildId(messageDetails.getMember().getId().toString(), myGuild.getId());
+        Member member = memberRepository.findByUidAndGuildId(messageDetails.getMember().getId().asString(), myGuild.getId());
         logger.info(String.format("%s %s", messageDetails.getMember().getId().toString(), myGuild.getId()));
         if (member != null) {
             logger.info(String.format("Logging message from %s (%s)", messageDetails.getMember().getNickname(), messageDetails.getMember().getUsername()));
